@@ -38,6 +38,24 @@ class LearningState:
         )
         return LearningState(updated, self.samples + 1, self.mean_arrival_error)
 
+    def record_arrival_error(self, minutes: float) -> LearningState:
+        """Correct the estimate slowly; an outlier cannot dominate the model."""
+        if not math.isfinite(minutes):
+            return self
+        bounded = max(-120.0, min(120.0, minutes))
+        return LearningState(
+            self.heating_rate,
+            self.samples,
+            max(
+                -60.0,
+                min(
+                    60.0,
+                    self.mean_arrival_error
+                    + 0.05 * (bounded - self.mean_arrival_error),
+                ),
+            ),
+        )
+
     def as_dict(self) -> dict[str, float | int]:
         return {
             "heating_rate": self.heating_rate,
@@ -104,6 +122,7 @@ class FallbackModel:
             + gain / self.learning.heating_rate
             + envelope * self.settings.loss_factor
             + self.settings.preheat_margin
+            + self.learning.mean_arrival_error
         )
         minutes = min(
             self.settings.max_preheat, max(self.settings.min_preheat, minutes)

@@ -13,3 +13,11 @@ def test_cycle_validation_and_bounded_learning():
     assert updated.samples == 1
     assert updated.heating_rate == 0.19
     assert LearningState.from_dict(updated.as_dict(), Settings()) == updated
+
+
+def test_arrival_error_is_slow_and_bounded():
+    state = LearningState.initial(Settings()).record_arrival_error(120)
+    assert state.mean_arrival_error == 6
+    for _ in range(100):
+        state = state.record_arrival_error(10000)
+    assert state.mean_arrival_error <= 60

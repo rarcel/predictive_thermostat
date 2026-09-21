@@ -77,6 +77,7 @@ class ControlRuntime:
         self._last_saved: dict[str, Any] | None = None
         self._logged_fault: str | None = None
         self._cycle_started: tuple[float, float, float, float] | None = None
+        self._arrival_recorded_for: datetime | None = None
 
     def _schedule_from_options(self) -> WeekSchedule:
         value = self.entry.options.get("schedule")
@@ -120,6 +121,20 @@ class ControlRuntime:
                     if now >= self.predicted_start:
                         self.target = self.schedule_resolution.next.temperature
                         self.preheating = now < self.schedule_resolution.next_at
+                        if (
+                            self.indoor is not None
+                            and self.indoor >= self.target
+                            and self._arrival_recorded_for
+                            != self.schedule_resolution.next_at
+                        ):
+                            error = (
+                                now - self.schedule_resolution.next_at
+                            ).total_seconds() / 60
+                            self.learning = self.learning.record_arrival_error(error)
+                            self.model = FallbackModel(self.settings, self.learning)
+                            self._arrival_recorded_for = (
+                                self.schedule_resolution.next_at
+                            )
                     else:
                         deadlines.append((self.predicted_start - now).total_seconds())
         else:

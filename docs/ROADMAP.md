@@ -62,7 +62,7 @@ Implémenté dans le dépôt : estimateur local, léger, explicable et borné pa
 - correction lente de l'erreur d'arrivée ;
 - migrations et tests.
 
-Implémenté dans le dépôt : validation de cycles de chauffe terminés, agrégat privé sans données brutes et mise à jour lente, bornée et explicable de la vitesse de chauffe. L’état agrégé est restauré depuis le Store privé ; les cycles invalides sont ignorés. La correction d’erreur d’arrivée et l’apprentissage des pertes restent à compléter avant la fin de cette étape.
+Implémenté dans le dépôt : validation de cycles de chauffe terminés, agrégat privé sans données brutes, mise à jour lente et bornée de la vitesse de chauffe, et correction lente de l’erreur d’arrivée. L’état agrégé est restauré depuis le Store privé ; les cycles invalides sont ignorés. L’apprentissage des pertes reste à compléter avant la fin de cette étape.
 
 ## Étape 6 — Durcissement réel
 

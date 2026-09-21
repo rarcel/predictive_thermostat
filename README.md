@@ -4,7 +4,7 @@
 
 ## Version actuelle : 0.5.0 — apprentissage initial local
 
-Cette étape apporte `OFF`, `HEAT` manuel et `AUTO`, une consigne, un planning interne hebdomadaire, un adaptateur `switch`, un contrôleur de cycle centralisé, une anticipation fallback et un apprentissage initial local. Le modèle ne peut jamais augmenter la consigne au-delà de la prochaine cible planifiée, ni contourner les protections matérielles.
+Cette étape apporte `OFF`, `HEAT` manuel et `AUTO`, une consigne, un planning interne hebdomadaire, un adaptateur `switch`, un contrôleur de cycle centralisé, une anticipation fallback et un apprentissage initial local. Il ajuste lentement la vitesse de chauffe et la marge d’arrivée à partir de cycles valides. Le modèle ne peut jamais augmenter la consigne au-delà de la prochaine cible planifiée, ni contourner les protections matérielles.
 
 L'intégration est créée en **mode observation**. Dans ce mode, elle calcule la décision qui serait prise mais n'appelle jamais le switch. Pour autoriser le mode HEAT réel, il faut désactiver explicitement cette option après avoir vérifié le câblage, la polarité, les délais constructeur et l'absence de contrôleur concurrent. Cette documentation ne déploie ni ne modifie aucune installation Home Assistant.
 
