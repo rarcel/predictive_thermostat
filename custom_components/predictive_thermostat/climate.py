@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import slugify
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import DOMAIN
@@ -45,6 +46,7 @@ class PredictiveThermostat(ClimateEntity):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         self._attr_temperature_unit = hass.config.units.temperature_unit
         self._attr_unique_id = entry.unique_id or entry.entry_id
+        self._attr_suggested_object_id = slugify(entry.title)
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self._attr_unique_id)}, name=entry.title
         )
