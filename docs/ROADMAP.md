@@ -53,7 +53,7 @@ Implémenté dans le dépôt : planning hebdomadaire local validé dans l'Option
 
 Implémenté dans le dépôt : estimateur local, léger, explicable et borné par les options ; la température extérieure intervient dans les pertes. Seules les hausses vers le prochain objectif peuvent être avancées. Sans sonde extérieure valide, aucune anticipation n'est faite. Le contrôleur de cycle reste l'autorité finale et le mode observation empêche toute commande réelle.
 
-## Étape 5 — Collecte et apprentissage
+## Étape 5 — Collecte et apprentissage (0.5.0)
 
 - détecteur de cycles ;
 - filtrage qualité ;
@@ -61,6 +61,8 @@ Implémenté dans le dépôt : estimateur local, léger, explicable et borné pa
 - modèle robuste et confiance ;
 - correction lente de l'erreur d'arrivée ;
 - migrations et tests.
+
+Implémenté dans le dépôt : validation de cycles de chauffe terminés, agrégat privé sans données brutes et mise à jour lente, bornée et explicable de la vitesse de chauffe. L’état agrégé est restauré depuis le Store privé ; les cycles invalides sont ignorés. La correction d’erreur d’arrivée et l’apprentissage des pertes restent à compléter avant la fin de cette étape.
 
 ## Étape 6 — Durcissement réel
 

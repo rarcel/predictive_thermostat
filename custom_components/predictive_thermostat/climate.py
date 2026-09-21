@@ -145,6 +145,7 @@ class PredictiveThermostat(ClimateEntity):
             "prediction_confidence": runtime.prediction.confidence
             if runtime.prediction is not None
             else 0.0,
+            "learning_samples": runtime.learning.samples,
         }
         self.async_write_ha_state()
 

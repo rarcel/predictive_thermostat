@@ -25,7 +25,8 @@ from homeassistant.util import dt as dt_util
 from .const import CONF_HEATER, CONF_INDOOR, CONF_OUTDOOR
 from .cycle_controller import CycleController, Decision
 from .heater_adapter import SwitchAdapter
-from .model import FallbackModel, Prediction
+from .model import FallbackModel, LearningState, Prediction
+from .observations import HeatingCycle
 from .schedule import ScheduleResolution, WeekSchedule
 from .settings import Settings
 from .sources import configured_sources, resolve, temperature
@@ -49,7 +50,8 @@ class ControlRuntime:
         )
         self.store = ControlStore(hass, entry.entry_id)
         self.schedule = self._schedule_from_options()
-        self.model = FallbackModel(self.settings)
+        self.learning = LearningState.initial(self.settings)
+        self.model = FallbackModel(self.settings, self.learning)
         self.mode = "off"
         self.heat = False
         self.manual_target = self.settings.initial_target
@@ -74,6 +76,7 @@ class ControlRuntime:
         self._in_flight = False
         self._last_saved: dict[str, Any] | None = None
         self._logged_fault: str | None = None
+        self._cycle_started: tuple[float, float, float, float] | None = None
 
     def _schedule_from_options(self) -> WeekSchedule:
         value = self.entry.options.get("schedule")
@@ -198,6 +201,12 @@ class ControlRuntime:
             elif saved["pending"]:
                 self.core.fail("command_interrupted")
         if saved.get("sources") == self.sources:
+            learning = saved.get("learning")
+            if learning is not None:
+                if not isinstance(learning, dict):
+                    raise ValueError("Invalid learning")
+                self.learning = LearningState.from_dict(learning, self.settings)
+                self.model = FallbackModel(self.settings, self.learning)
             target = min(
                 self.settings.max_temperature,
                 max(self.settings.min_temperature, float(target)),
@@ -238,6 +247,7 @@ class ControlRuntime:
             "override": None
             if self.override is None
             else {"target": self.override[0], "until": self.override[1].isoformat()},
+            "learning": self.learning.as_dict(),
             "fault": self.core.fault,
             "pending": pending or self._in_flight or self.core.pending is not None,
             "sources": self.sources,
@@ -330,6 +340,30 @@ class ControlRuntime:
             )
         if self.expires is not None and self.core.clock() >= self.expires:
             self.indoor = None
+        self._learn_cycle()
+
+    def _learn_cycle(self) -> None:
+        """Aggregate only a confirmed, plausible cycle that reached its target."""
+        if self.core.observed and self._cycle_started is None:
+            if self.indoor is not None and self.outdoor is not None:
+                self._cycle_started = (
+                    self.core.clock(),
+                    self.indoor,
+                    self.outdoor,
+                    self.target,
+                )
+            return
+        if self.core.observed or self._cycle_started is None:
+            return
+        started, indoor, outdoor, target = self._cycle_started
+        self._cycle_started = None
+        if self.indoor is not None and self.indoor >= target:
+            self.learning = self.learning.update(
+                HeatingCycle(
+                    indoor, outdoor, target, (self.core.clock() - started) / 60
+                )
+            )
+            self.model = FallbackModel(self.settings, self.learning)
 
     async def _drain(self) -> None:
         while self._dirty and self._running:

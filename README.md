@@ -2,9 +2,9 @@
 
 `predictive_thermostat` est une custom integration Home Assistant locale et paramétrable, conçue d'abord pour des chauffages à forte inertie tels qu'un poêle à granulés. Elle expose **une seule entité `climate` principale par zone**. Son planning interne futur signifiera toujours « température à atteindre à cette heure » ; la température extérieure servira à une prédiction explicable, locale et légère.
 
-## Version actuelle : 0.4.0 — préchauffage fallback local
+## Version actuelle : 0.5.0 — apprentissage initial local
 
-Cette étape apporte `OFF`, `HEAT` manuel et `AUTO`, une consigne, un planning interne hebdomadaire, un adaptateur `switch`, un contrôleur de cycle centralisé et une première anticipation fallback. L'apprentissage n'est pas encore disponible. Le modèle ne peut jamais augmenter la consigne au-delà de la prochaine cible planifiée, ni contourner les protections matérielles.
+Cette étape apporte `OFF`, `HEAT` manuel et `AUTO`, une consigne, un planning interne hebdomadaire, un adaptateur `switch`, un contrôleur de cycle centralisé, une anticipation fallback et un apprentissage initial local. Le modèle ne peut jamais augmenter la consigne au-delà de la prochaine cible planifiée, ni contourner les protections matérielles.
 
 L'intégration est créée en **mode observation**. Dans ce mode, elle calcule la décision qui serait prise mais n'appelle jamais le switch. Pour autoriser le mode HEAT réel, il faut désactiver explicitement cette option après avoir vérifié le câblage, la polarité, les délais constructeur et l'absence de contrôleur concurrent. Cette documentation ne déploie ni ne modifie aucune installation Home Assistant.
 
