@@ -1,0 +1,44 @@
+{
+  "title": "Predictive Thermostat",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Créer une zone d’observation",
+        "description": "Ce premier jalon affiche les mesures sans commander le chauffage. Le thermostat existant reste responsable du chauffage. Planning et prédiction ne sont pas encore disponibles.",
+        "data": {
+          "name": "Nom de la zone",
+          "indoor_sensor": "Sonde de température intérieure",
+          "outdoor_sensor": "Sonde de température extérieure",
+          "heater": "Interrupteur du chauffage (observation uniquement)"
+        }
+      }
+    },
+    "error": {
+      "invalid_entity": "Choisissez une entité existante du domaine demandé.",
+      "not_temperature": "Choisissez une sonde de température.",
+      "same_sensor": "Choisissez deux sondes distinctes.",
+      "heater_in_use": "Ce chauffage est déjà associé à une autre zone.",
+      "empty_name": "Saisissez un nom de zone."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Modifier les sources",
+        "description": "Observation uniquement. Les changements rechargent cette intégration sans commander le chauffage.",
+        "data": {
+          "indoor_sensor": "Sonde de température intérieure",
+          "outdoor_sensor": "Sonde de température extérieure",
+          "heater": "Interrupteur du chauffage (observation uniquement)"
+        }
+      }
+    },
+    "error": {
+      "invalid_entity": "Choisissez une entité existante du domaine demandé.",
+      "not_temperature": "Choisissez une sonde de température.",
+      "same_sensor": "Choisissez deux sondes distinctes.",
+      "heater_in_use": "Ce chauffage est déjà associé à une autre zone.",
+      "empty_name": "Saisissez un nom de zone."
+    }
+  }
+}

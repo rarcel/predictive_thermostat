@@ -1,0 +1,24 @@
+name: Validate observation scaffold
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14.7'
+          cache: pip
+          cache-dependency-path: requirements_test.txt
+      - run: python -m pip install -r requirements_test.txt
+      - run: ruff check custom_components tests
+      - run: ruff format --check custom_components tests
+      - run: mypy
+      - run: pytest -q --disable-socket --allow-unix-socket

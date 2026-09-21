@@ -1,0 +1,44 @@
+{
+  "title": "Predictive Thermostat",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Create an observation zone",
+        "description": "This milestone displays measurements without controlling the heater. Your existing thermostat remains in charge. Scheduling and prediction are not available yet.",
+        "data": {
+          "name": "Zone name",
+          "indoor_sensor": "Indoor temperature sensor",
+          "outdoor_sensor": "Outdoor temperature sensor",
+          "heater": "Heater switch (observation only)"
+        }
+      }
+    },
+    "error": {
+      "invalid_entity": "Choose an existing entity of the requested domain.",
+      "not_temperature": "Choose a temperature sensor.",
+      "same_sensor": "Use different indoor and outdoor sensors.",
+      "heater_in_use": "This heater is already assigned to another zone.",
+      "empty_name": "Enter a zone name."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Change sources",
+        "description": "Observation only. Changes reload this integration without controlling the heater.",
+        "data": {
+          "indoor_sensor": "Indoor temperature sensor",
+          "outdoor_sensor": "Outdoor temperature sensor",
+          "heater": "Heater switch (observation only)"
+        }
+      }
+    },
+    "error": {
+      "invalid_entity": "Choose an existing entity of the requested domain.",
+      "not_temperature": "Choose a temperature sensor.",
+      "same_sensor": "Use different indoor and outdoor sensors.",
+      "heater_in_use": "This heater is already assigned to another zone.",
+      "empty_name": "Enter a zone name."
+    }
+  }
+}
