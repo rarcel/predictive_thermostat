@@ -179,3 +179,28 @@ async def test_auto_starts_only_inside_bounded_preheat_window(hass, entry):
     state = hass.states.get(entity_id)
     assert state.attributes["temperature"] == 22
     assert state.attributes["predicted_heating_minutes"] is not None
+
+
+async def test_auto_without_outdoor_temperature_does_not_preheat(hass, entry):
+    fields = WeekSchedule.default(17).fields()
+    fields["monday"] = "00:00=17, 11:00=22"
+    hass.config_entries.async_update_entry(
+        entry,
+        options={
+            "settings": Settings().as_dict(),
+            "schedule": WeekSchedule.from_fields(fields).as_dict(),
+        },
+    )
+    entity_id, thermostat = await _entity(hass, entry)
+    thermostat.runtime._local_now = lambda: datetime(
+        2026, 9, 21, 10, 45, tzinfo=ZoneInfo("Europe/Paris")
+    )
+    hass.states.async_set("sensor.outside", "unavailable")
+    await hass.services.async_call(
+        "climate", "set_hvac_mode", {"entity_id": entity_id, "hvac_mode": "auto"}, True
+    )
+    await hass.async_block_till_done()
+    state = hass.states.get(entity_id)
+    assert state.attributes["temperature"] == 17
+    assert state.attributes["predicted_start_time"] is None
+    assert state.attributes["prediction_reason"] == "outdoor_unavailable"

@@ -145,7 +145,13 @@ class PredictiveThermostat(ClimateEntity):
             "prediction_confidence": runtime.prediction.confidence
             if runtime.prediction is not None
             else 0.0,
+            "prediction_reason": runtime.prediction.reason
+            if runtime.prediction is not None
+            else "outdoor_unavailable"
+            if runtime.mode == "auto" and runtime.outdoor is None
+            else None,
             "learning_samples": runtime.learning.samples,
+            "last_prediction_error_minutes": runtime.learning.mean_arrival_error,
         }
         self.async_write_ha_state()
 

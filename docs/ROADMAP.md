@@ -72,6 +72,8 @@ Implémenté dans le dépôt : validation de cycles de chauffe terminés, agrég
 - diagnostics, documentation HACS, icônes/brand si utile ;
 - revue des scénarios de panne.
 
+Durcissement de dépôt en cours : les tests couvrent le repli sans extérieur, le défaut d’actionneur, les commandes confirmées, les redémarrages de logique, les cycles courts, les DST et le déchargement sans commande. Les essais sur une installation, l’observation de prédictions réelles et toute activation matérielle restent explicitement hors du dépôt et exigent un accord distinct.
+
 ## Après V1
 
 - arrêt optimal ;
