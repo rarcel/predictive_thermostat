@@ -44,6 +44,13 @@
           "max_temperature": "Maximum target temperature (°C)",
           "target_step": "Target temperature step (°C)",
           "initial_target": "Initial target temperature (°C)",
+          "monday": "Monday targets (HH:MM=°C)",
+          "tuesday": "Tuesday targets (HH:MM=°C)",
+          "wednesday": "Wednesday targets (HH:MM=°C)",
+          "thursday": "Thursday targets (HH:MM=°C)",
+          "friday": "Friday targets (HH:MM=°C)",
+          "saturday": "Saturday targets (HH:MM=°C)",
+          "sunday": "Sunday targets (HH:MM=°C)",
           "reset_fault": "Acknowledge and reset a latched fault"
         }
       }
@@ -54,7 +61,8 @@
       "same_sensor": "Use different indoor and outdoor sensors.",
       "heater_in_use": "This heater is already assigned to another zone.",
       "empty_name": "Enter a zone name.",
-      "invalid_setting": "Check the safety settings and temperature limits."
+      "invalid_setting": "Check the safety settings and temperature limits.",
+      "invalid_schedule": "Enter at least one unique HH:MM=temperature target per day."
     }
   }
 }

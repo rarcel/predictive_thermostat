@@ -18,7 +18,7 @@ async def test_observation(hass, entry, no_services):
     entity_id = await loaded(hass, entry)
     state = hass.states.get(entity_id)
     assert state.state == "off"
-    assert state.attributes["hvac_modes"] == ["off", "heat"]
+    assert state.attributes["hvac_modes"] == ["off", "heat", "auto"]
     assert state.attributes["supported_features"] > 0
     assert state.attributes["current_temperature"] == 20
     assert state.attributes["outdoor_temperature"] == 8

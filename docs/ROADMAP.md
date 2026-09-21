@@ -32,7 +32,7 @@ Implémenté dans le dépôt : contrôleur de cycle pur à horloge injectée, ad
 
 Ce jalon doit être fiable avant tout apprentissage.
 
-## Étape 3 — Planning interne et AUTO
+## Étape 3 — Planning interne et AUTO (0.3.0)
 
 - modèle de planning ;
 - Options Flow ;
@@ -40,6 +40,8 @@ Ce jalon doit être fiable avant tout apprentissage.
 - mode `AUTO` ;
 - dérogation jusqu'au prochain point ;
 - gestion DST et tests.
+
+Implémenté dans le dépôt : planning hebdomadaire local validé dans l'Options Flow, cible courante et suivante, mode `AUTO`, dérogation manuelle persistée jusqu'au prochain point et règles DST déterministes. AUTO applique seulement la cible active ; l'anticipation reste l'étape prédictive suivante. Les protections du contrôleur et le mode observation ont toujours priorité.
 
 ## Étape 4 — Prédiction fallback
 

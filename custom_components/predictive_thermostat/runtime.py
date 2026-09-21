@@ -25,6 +25,7 @@ from homeassistant.util import dt as dt_util
 from .const import CONF_HEATER, CONF_INDOOR
 from .cycle_controller import CycleController, Decision
 from .heater_adapter import SwitchAdapter
+from .schedule import ScheduleResolution, WeekSchedule
 from .settings import Settings
 from .sources import configured_sources, resolve, temperature
 from .storage import ControlStore
@@ -46,8 +47,13 @@ class ControlRuntime:
             hass, self.sources[CONF_HEATER], self.settings.inverted
         )
         self.store = ControlStore(hass, entry.entry_id)
+        self.schedule = self._schedule_from_options()
+        self.mode = "off"
         self.heat = False
-        self.target = self.settings.initial_target
+        self.manual_target = self.settings.initial_target
+        self.target = self.manual_target
+        self.override: tuple[float, datetime] | None = None
+        self.schedule_resolution: ScheduleResolution | None = None
         self.decision = Decision("reconciling")
         self.indoor: float | None = None
         self.expires: float | None = None
@@ -62,6 +68,53 @@ class ControlRuntime:
         self._in_flight = False
         self._last_saved: dict[str, Any] | None = None
         self._logged_fault: str | None = None
+
+    def _schedule_from_options(self) -> WeekSchedule:
+        value = self.entry.options.get("schedule")
+        if value is None:
+            return WeekSchedule.default(self.settings.initial_target)
+        if not isinstance(value, dict):
+            raise ValueError("Invalid schedule")
+        return WeekSchedule.from_dict(value)
+
+    def _local_now(self) -> datetime:
+        return dt_util.now(dt_util.get_time_zone(self.hass.config.time_zone))
+
+    def _apply_mode(self) -> float | None:
+        """Resolve AUTO once per decision and return its next deadline delay."""
+        now = self._local_now()
+        self.schedule_resolution = self.schedule.resolve(now)
+        if self.override is not None and now >= self.override[1]:
+            self.override = None
+        if self.mode == "auto":
+            self.heat = True
+            self.target = (
+                self.override[0]
+                if self.override is not None
+                else self.schedule_resolution.current.temperature
+            )
+        else:
+            self.heat = self.mode == "heat"
+            self.target = self.manual_target
+        return max(0.0, (self.schedule_resolution.next_at - now).total_seconds())
+
+    def set_mode(self, mode: str) -> None:
+        """Set a user mode; AUTO starts from the current schedule target."""
+        if mode not in {"off", "heat", "auto"}:
+            raise ValueError("Unsupported mode")
+        if mode == "auto" and self.mode != "auto":
+            self.override = None
+        self.mode = mode
+        self.request()
+
+    def set_target(self, target: float) -> None:
+        """In AUTO, retain a manual target only up to the next schedule point."""
+        if self.mode == "auto":
+            resolution = self.schedule.resolve(self._local_now())
+            self.override = (target, resolution.next_at)
+        else:
+            self.manual_target = target
+        self.request()
 
     async def start(self) -> None:
         """Load the safety record before any control decision."""
@@ -119,21 +172,46 @@ class ControlRuntime:
             elif saved["pending"]:
                 self.core.fail("command_interrupted")
         if saved.get("sources") == self.sources:
-            self.target = min(
+            target = min(
                 self.settings.max_temperature,
                 max(self.settings.min_temperature, float(target)),
             )
+            self.manual_target = target
+            self.target = target
+            mode = saved.get("mode", "heat" if saved["heat"] else "off")
+            if mode not in {"off", "heat", "auto"}:
+                raise ValueError("Invalid mode")
+            override = saved.get("override")
+            if override is not None:
+                try:
+                    override_target = float(override["target"])
+                    override_until = datetime.fromisoformat(override["until"])
+                except (KeyError, TypeError, ValueError) as err:
+                    raise ValueError("Invalid override") from err
+                if (
+                    not math.isfinite(override_target)
+                    or override_until.tzinfo is None
+                    or not self.settings.min_temperature
+                    <= override_target
+                    <= self.settings.max_temperature
+                ):
+                    raise ValueError("Invalid override")
+                if override_until > self._local_now():
+                    self.override = (override_target, override_until)
             # Enabling hardware never resumes a dry-run demand automatically.
-            self.heat = (
-                saved["heat"]
-                and saved["observation_only"] == self.settings.observation_only
-            )
+            if saved["observation_only"] == self.settings.observation_only:
+                self.mode = mode
 
     def _snapshot(self, pending: bool = False) -> dict[str, Any]:
         return {
             "schema_version": 1,
             "heat": self.heat,
             "target": self.target,
+            "manual_target": self.manual_target,
+            "mode": self.mode,
+            "override": None
+            if self.override is None
+            else {"target": self.override[0], "until": self.override[1].isoformat()},
             "fault": self.core.fault,
             "pending": pending or self._in_flight or self.core.pending is not None,
             "sources": self.sources,
@@ -234,6 +312,7 @@ class ControlRuntime:
             self._timer()
             self._timer = None
         self._read()
+        schedule_delay = self._apply_mode()
         self.decision = self.core.decide(self.heat, self.target, self.indoor)
         command = self.decision.command
         if command is not None and not self.settings.observation_only:
@@ -270,6 +349,8 @@ class ControlRuntime:
             for d in (self.decision.deadline, self.expires)
             if d is not None and d > now
         ]
+        if schedule_delay is not None and schedule_delay > 0:
+            deadlines.append(now + schedule_delay)
         if deadlines and self._running:
             self._timer = async_call_later(self.hass, min(deadlines) - now, self._wake)
         if self._running:

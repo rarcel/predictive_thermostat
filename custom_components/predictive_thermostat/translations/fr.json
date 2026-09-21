@@ -44,6 +44,13 @@
           "max_temperature": "Consigne maximale (°C)",
           "target_step": "Pas de consigne (°C)",
           "initial_target": "Consigne initiale (°C)",
+          "monday": "Objectifs du lundi (HH:MM=°C)",
+          "tuesday": "Objectifs du mardi (HH:MM=°C)",
+          "wednesday": "Objectifs du mercredi (HH:MM=°C)",
+          "thursday": "Objectifs du jeudi (HH:MM=°C)",
+          "friday": "Objectifs du vendredi (HH:MM=°C)",
+          "saturday": "Objectifs du samedi (HH:MM=°C)",
+          "sunday": "Objectifs du dimanche (HH:MM=°C)",
           "reset_fault": "Acquitter et réinitialiser un défaut verrouillé"
         }
       }
@@ -54,7 +61,8 @@
       "same_sensor": "Choisissez deux sondes distinctes.",
       "heater_in_use": "Ce chauffage est déjà associé à une autre zone.",
       "empty_name": "Saisissez un nom de zone.",
-      "invalid_setting": "Vérifiez les réglages de sécurité et les limites de température."
+      "invalid_setting": "Vérifiez les réglages de sécurité et les limites de température.",
+      "invalid_schedule": "Saisissez au moins un objectif unique HH:MM=température par jour."
     }
   }
 }

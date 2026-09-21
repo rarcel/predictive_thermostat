@@ -13,6 +13,7 @@ from custom_components.predictive_thermostat.const import (
     CONF_OUTDOOR,
     DOMAIN,
 )
+from custom_components.predictive_thermostat.schedule import WeekSchedule
 from custom_components.predictive_thermostat.settings import Settings
 
 
@@ -112,6 +113,7 @@ async def test_options_reload(hass, inputs, entry, no_services):
                 CONF_OUTDOOR: inputs[CONF_OUTDOOR],
                 CONF_HEATER: inputs[CONF_HEATER],
                 **Settings().as_dict(),
+                **WeekSchedule.default(20).fields(),
                 "reset_fault": False,
             },
         )
@@ -130,6 +132,7 @@ async def test_options_rejects_unsafe_duration(hass, inputs, entry, no_services)
     invalid = {
         **{key: value for key, value in inputs.items() if key != CONF_NAME},
         **Settings().as_dict(),
+        **WeekSchedule.default(20).fields(),
         "min_on": 0,
         "reset_fault": False,
     }
@@ -138,3 +141,19 @@ async def test_options_rejects_unsafe_duration(hass, inputs, entry, no_services)
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "invalid_setting"}
+
+
+async def test_options_rejects_empty_schedule(hass, inputs, entry, no_services):
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    invalid = {
+        **{key: value for key, value in inputs.items() if key != CONF_NAME},
+        **Settings().as_dict(),
+        **WeekSchedule.default(20).fields(),
+        "monday": "",
+        "reset_fault": False,
+    }
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], invalid
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "invalid_schedule"}

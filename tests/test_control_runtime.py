@@ -4,6 +4,7 @@ from homeassistant.helpers import entity_component
 from homeassistant.helpers import entity_registry as er
 
 from custom_components.predictive_thermostat.const import DOMAIN
+from custom_components.predictive_thermostat.schedule import WeekSchedule
 from custom_components.predictive_thermostat.settings import Settings
 
 
@@ -125,3 +126,27 @@ async def test_unload_never_commands_the_switch(hass, entry):
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert not calls
+
+
+async def test_auto_uses_schedule_then_manual_override(hass, entry):
+    schedule = WeekSchedule.default(17)
+    hass.config_entries.async_update_entry(
+        entry,
+        options={"settings": Settings().as_dict(), "schedule": schedule.as_dict()},
+    )
+    entity_id, _ = await _entity(hass, entry)
+    await hass.services.async_call(
+        "climate", "set_hvac_mode", {"entity_id": entity_id, "hvac_mode": "auto"}, True
+    )
+    await hass.async_block_till_done()
+    state = hass.states.get(entity_id)
+    assert state.state == "auto"
+    assert state.attributes["temperature"] == 17
+    assert state.attributes["next_target_temperature"] == 17
+    await hass.services.async_call(
+        "climate", "set_temperature", {"entity_id": entity_id, "temperature": 22}, True
+    )
+    await hass.async_block_till_done()
+    state = hass.states.get(entity_id)
+    assert state.attributes["temperature"] == 22
+    assert state.attributes["override_until"] is not None

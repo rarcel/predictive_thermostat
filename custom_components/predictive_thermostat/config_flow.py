@@ -16,6 +16,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig
 
 from .const import CONF_HEATER, CONF_INDOOR, CONF_OUTDOOR, DOMAIN, SOURCE_KEYS
+from .schedule import DAYS, WeekSchedule
 from .settings import Settings
 from .sources import configured_sources, reference, resolve
 
@@ -52,6 +53,11 @@ def settings_schema() -> dict[Any, Any]:
         vol.Required("initial_target"): vol.Coerce(float),
         vol.Optional("reset_fault"): bool,
     }
+
+
+def schedule_schema() -> dict[Any, Any]:
+    """One editable local-time field per weekday; no timestamp is stored."""
+    return {vol.Required(day): str for day in DAYS}
 
 
 def validate_sources(
@@ -145,14 +151,31 @@ class SourceOptionsFlow(OptionsFlowWithReload):
             settings_input = {
                 key: value
                 for key, value in user_input.items()
-                if key not in (*SOURCE_KEYS, "reset_fault")
+                if key not in (*SOURCE_KEYS, *DAYS, "reset_fault")
             }
+            settings = Settings()
             try:
                 settings = Settings.from_dict(settings_input)
             except ValueError:
                 errors["base"] = "invalid_setting"
+            try:
+                schedule = WeekSchedule.from_fields(user_input)
+                if any(
+                    not settings.min_temperature
+                    <= point.temperature
+                    <= settings.max_temperature
+                    for points in schedule.points.values()
+                    for point in points
+                ):
+                    raise ValueError("schedule_temperature")
+            except ValueError:
+                errors["base"] = "invalid_schedule"
             if not errors:
-                data = {**sources, "settings": settings.as_dict()}
+                data = {
+                    **sources,
+                    "settings": settings.as_dict(),
+                    "schedule": schedule.as_dict(),
+                }
                 if user_input.get("reset_fault"):
                     data["reset_fault_token"] = str(uuid4())
                 return self.async_create_entry(data=data)
@@ -163,12 +186,21 @@ class SourceOptionsFlow(OptionsFlowWithReload):
         existing = Settings.from_dict(
             dict(self.config_entry.options.get("settings", {}))
         ).as_dict()
+        schedule_data = self.config_entry.options.get("schedule")
+        schedule = (
+            WeekSchedule.from_dict(schedule_data)
+            if isinstance(schedule_data, dict)
+            else WeekSchedule.default(existing["initial_target"])
+        )
         existing.update(defaults)
+        existing.update(schedule.fields())
         existing["reset_fault"] = False
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema({**source_schema(), **settings_schema()}),
+                vol.Schema(
+                    {**source_schema(), **settings_schema(), **schedule_schema()}
+                ),
                 user_input or existing,
             ),
             errors=errors,

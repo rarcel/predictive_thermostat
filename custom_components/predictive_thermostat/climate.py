@@ -1,4 +1,4 @@
-"""Home Assistant adaptation of the protected, non-predictive thermostat."""
+"""Home Assistant adaptation of protected manual and scheduled control."""
 
 import math
 from typing import Any
@@ -35,7 +35,7 @@ class PredictiveThermostat(ClimateEntity):
     _attr_should_poll = False
     _attr_has_entity_name = True
     _attr_name = None
-    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
+    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT, HVACMode.AUTO]
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE
         | ClimateEntityFeature.TURN_ON
@@ -82,7 +82,7 @@ class PredictiveThermostat(ClimateEntity):
         )
         self._attr_target_temperature = self._display(runtime.target)
         self._attr_available = runtime.indoor is not None
-        self._attr_hvac_mode = HVACMode.HEAT if runtime.heat else HVACMode.OFF
+        self._attr_hvac_mode = HVACMode(runtime.mode)
         self._attr_hvac_action = (
             HVACAction.OFF
             if runtime.settings.observation_only
@@ -121,14 +121,29 @@ class PredictiveThermostat(ClimateEntity):
                 if core.observed is None
                 else None
             ),
+            "schedule_target_temperature": self._display(
+                runtime.schedule_resolution.current.temperature
+            )
+            if runtime.schedule_resolution is not None
+            else None,
+            "next_target_temperature": self._display(
+                runtime.schedule_resolution.next.temperature
+            )
+            if runtime.schedule_resolution is not None
+            else None,
+            "next_target_time": runtime.schedule_resolution.next_at.isoformat()
+            if runtime.schedule_resolution is not None
+            else None,
+            "override_until": runtime.override[1].isoformat()
+            if runtime.override is not None
+            else None,
         }
         self.async_write_ha_state()
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-        if hvac_mode not in (HVACMode.OFF, HVACMode.HEAT):
-            raise ServiceValidationError("Only OFF and HEAT are supported")
-        self.runtime.heat = hvac_mode == HVACMode.HEAT
-        self.runtime.request()
+        if hvac_mode not in (HVACMode.OFF, HVACMode.HEAT, HVACMode.AUTO):
+            raise ServiceValidationError("Only OFF, HEAT and AUTO are supported")
+        self.runtime.set_mode(hvac_mode.value)
         self._refresh()
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
@@ -151,12 +166,15 @@ class PredictiveThermostat(ClimateEntity):
         ):
             raise ServiceValidationError("Target temperature outside configured limits")
         mode = kwargs.get("hvac_mode")
-        if mode is not None and mode not in (HVACMode.OFF, HVACMode.HEAT):
-            raise ServiceValidationError("Only OFF and HEAT are supported")
-        self.runtime.target = target
+        if mode is not None and mode not in (
+            HVACMode.OFF,
+            HVACMode.HEAT,
+            HVACMode.AUTO,
+        ):
+            raise ServiceValidationError("Only OFF, HEAT and AUTO are supported")
         if mode is not None:
-            self.runtime.heat = mode == HVACMode.HEAT
-        self.runtime.request()
+            self.runtime.set_mode(mode.value)
+        self.runtime.set_target(target)
         self._refresh()
 
     async def async_turn_on(self, **kwargs: Any) -> None:

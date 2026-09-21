@@ -1,4 +1,4 @@
-# Développement du jalon 0.2.0
+# Développement du jalon 0.3.0
 
 ## Environnement isolé
 
@@ -22,6 +22,7 @@ Avec uv déjà installé : `uv venv --python 3.14.7 .venv`, puis `uv pip install
 - `config_flow.py` : validation des sources, création de zone, OptionsFlowWithReload. Aucun test matériel lors du flow.
 - `sources.py` : références stables de registre, résolution après renommage et conversion des températures.
 - `settings.py` : paramètres matériels validés et sérialisables.
+- `schedule.py` : planning hebdomadaire local pur, normalisé et testé aux changements DST.
 - `cycle_controller.py` : machine à états pure avec horloge injectée ; elle impose hystérésis, durées minimales, cooldown, confirmation et défaut verrouillé.
 - `heater_adapter.py` : seule passerelle vers un `switch`, avec validation d'état et de service.
 - `runtime.py` : sérialise les événements HA, le stockage, le timer et les décisions ; il ne commande jamais au déchargement.
@@ -29,7 +30,7 @@ Avec uv déjà installé : `uv venv --python 3.14.7 .venv`, puis `uv pip install
 - `climate.py` : adaptation Home Assistant des modes OFF/HEAT et de la consigne, sans logique thermique complexe.
 - `diagnostics.py` : résumé par liste blanche sans référence privée.
 
-Le choix de sources est stocké dans Config Entry / Options, schéma 1. Les options portent aussi les protections matérielles. Le Store privé ne conserve que l'état de contrôle nécessaire à une reprise sûre et ne figure pas dans les diagnostics. Le mode observation est la valeur par défaut ; le test matériel demeure hors de ce dépôt.
+Le choix de sources et le planning sont stockés dans Config Entry / Options, schéma 1. Les options portent aussi les protections matérielles. Le Store privé conserve l'état de contrôle et une éventuelle dérogation AUTO jusqu'au prochain point ; il ne figure pas dans les diagnostics. Le mode observation est la valeur par défaut ; le test matériel demeure hors de ce dépôt.
 
 Le Core 2026.9.3 installé fournit des sélecteurs utilisant voluptuous ; le Config Flow utilise cette API, validée par les tests réels du framework. Cela précise le repérage documentaire initial, qui mentionnait aussi probatio dans la documentation récente.
 
