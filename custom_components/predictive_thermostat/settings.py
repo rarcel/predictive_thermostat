@@ -28,11 +28,14 @@ class Settings:
     preheat_margin: float = 5
     min_preheat: float = 5
     max_preheat: float = 180
+    optimal_stop_enabled: bool = False
+    cooling_rate: float = 0.05
+    max_stop_advance: float = 60
 
     def __post_init__(self) -> None:
         for item in fields(self):
             value = getattr(self, item.name)
-            if item.name in ("observation_only", "inverted"):
+            if item.name in ("observation_only", "inverted", "optimal_stop_enabled"):
                 if type(value) is not bool:
                     raise ValueError(item.name)
             elif (
@@ -51,13 +54,18 @@ class Settings:
             "preheat_margin",
             "min_preheat",
             "max_preheat",
+            "max_stop_advance",
         ):
             if not 1 <= getattr(self, key) <= 86400:
                 raise ValueError(key)
         for key in ("cold_tolerance", "hot_tolerance", "target_step"):
             if not 0 < getattr(self, key) <= 10:
                 raise ValueError(key)
-        if not 0 < self.heating_rate <= 10 or not 0 <= self.loss_factor <= 10:
+        if (
+            not 0 < self.heating_rate <= 10
+            or not 0 <= self.loss_factor <= 10
+            or not 0 < self.cooling_rate <= 10
+        ):
             raise ValueError("heating_model")
         if self.min_preheat > self.max_preheat:
             raise ValueError("preheat_range")

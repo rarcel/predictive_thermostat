@@ -22,7 +22,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_HEATER, CONF_INDOOR, CONF_OUTDOOR
+from .const import CONF_HEATER, CONF_INDOOR, CONF_OUTDOOR, CONF_WEATHER
 from .cycle_controller import CycleController, Decision
 from .heater_adapter import SwitchAdapter
 from .model import FallbackModel, LearningState, Prediction
@@ -31,6 +31,7 @@ from .schedule import ScheduleResolution, WeekSchedule
 from .settings import Settings
 from .sources import configured_sources, resolve, temperature
 from .storage import ControlStore
+from .weather import async_forecast_temperature
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,6 +60,7 @@ class ControlRuntime:
         self.override: tuple[float, datetime] | None = None
         self.schedule_resolution: ScheduleResolution | None = None
         self.outdoor: float | None = None
+        self.forecast_outdoor: float | None = None
         self.prediction: Prediction | None = None
         self.predicted_start: datetime | None = None
         self.preheating = False
@@ -111,7 +113,9 @@ class ControlRuntime:
             ):
                 self.prediction = self.model.predict(
                     self.indoor,
-                    self.outdoor,
+                    self.forecast_outdoor
+                    if self.forecast_outdoor is not None
+                    else self.outdoor,
                     self.schedule_resolution.next.temperature,
                 )
                 if self.prediction is not None:
@@ -137,6 +141,18 @@ class ControlRuntime:
                             )
                     else:
                         deadlines.append((self.predicted_start - now).total_seconds())
+            if (
+                self.settings.optimal_stop_enabled
+                and self.schedule_resolution.next.temperature < self.target
+                and self.indoor is not None
+            ):
+                coast = (
+                    self.indoor - self.schedule_resolution.next.temperature
+                ) / self.settings.cooling_rate
+                if 0 <= coast and (
+                    self.schedule_resolution.next_at - now
+                ).total_seconds() / 60 <= min(coast, self.settings.max_stop_advance):
+                    self.heat = False
         else:
             self.heat = self.mode == "heat"
             self.target = self.manual_target
@@ -393,6 +409,17 @@ class ControlRuntime:
             self._timer()
             self._timer = None
         self._read()
+        next_at = self.schedule.resolve(self._local_now()).next_at
+        weather = self.entry.options.get(CONF_WEATHER)
+        weather_entity = (
+            resolve(self.hass, weather) if isinstance(weather, dict) else None
+        )
+        self.forecast_outdoor = await async_forecast_temperature(
+            self.hass,
+            weather_entity,
+            next_at,
+            self.outdoor,
+        )
         schedule_delays = self._apply_mode()
         self.decision = self.core.decide(self.heat, self.target, self.indoor)
         command = self.decision.command

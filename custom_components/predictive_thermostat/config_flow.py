@@ -15,7 +15,14 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig
 
-from .const import CONF_HEATER, CONF_INDOOR, CONF_OUTDOOR, DOMAIN, SOURCE_KEYS
+from .const import (
+    CONF_HEATER,
+    CONF_INDOOR,
+    CONF_OUTDOOR,
+    CONF_WEATHER,
+    DOMAIN,
+    SOURCE_KEYS,
+)
 from .schedule import DAYS, WeekSchedule
 from .settings import Settings
 from .sources import configured_sources, reference, resolve
@@ -57,6 +64,9 @@ def settings_schema() -> dict[Any, Any]:
         vol.Required("preheat_margin"): vol.Coerce(float),
         vol.Required("min_preheat"): vol.Coerce(float),
         vol.Required("max_preheat"): vol.Coerce(float),
+        vol.Required("optimal_stop_enabled"): bool,
+        vol.Required("cooling_rate"): vol.Coerce(float),
+        vol.Required("max_stop_advance"): vol.Coerce(float),
         vol.Optional("reset_fault"): bool,
     }
 
@@ -64,6 +74,14 @@ def settings_schema() -> dict[Any, Any]:
 def schedule_schema() -> dict[Any, Any]:
     """One editable local-time field per weekday; no timestamp is stored."""
     return {vol.Required(day): str for day in DAYS}
+
+
+def weather_schema() -> dict[Any, Any]:
+    return {
+        vol.Optional(CONF_WEATHER): EntitySelector(
+            EntitySelectorConfig(filter={"domain": "weather"})
+        )
+    }
 
 
 def validate_sources(
@@ -157,7 +175,7 @@ class SourceOptionsFlow(OptionsFlowWithReload):
             settings_input = {
                 key: value
                 for key, value in user_input.items()
-                if key not in (*SOURCE_KEYS, *DAYS, "reset_fault")
+                if key not in (*SOURCE_KEYS, *DAYS, "reset_fault", CONF_WEATHER)
             }
             settings = Settings()
             try:
@@ -182,6 +200,8 @@ class SourceOptionsFlow(OptionsFlowWithReload):
                     "settings": settings.as_dict(),
                     "schedule": schedule.as_dict(),
                 }
+                if weather := user_input.get(CONF_WEATHER):
+                    data[CONF_WEATHER] = reference(self.hass, weather)
                 if user_input.get("reset_fault"):
                     data["reset_fault_token"] = str(uuid4())
                 return self.async_create_entry(data=data)
@@ -199,13 +219,20 @@ class SourceOptionsFlow(OptionsFlowWithReload):
             else WeekSchedule.default(existing["initial_target"])
         )
         existing.update(defaults)
+        if weather := self.config_entry.options.get(CONF_WEATHER):
+            existing[CONF_WEATHER] = resolve(self.hass, weather)
         existing.update(schedule.fields())
         existing["reset_fault"] = False
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(
                 vol.Schema(
-                    {**source_schema(), **settings_schema(), **schedule_schema()}
+                    {
+                        **source_schema(),
+                        **weather_schema(),
+                        **settings_schema(),
+                        **schedule_schema(),
+                    }
                 ),
                 user_input or existing,
             ),
