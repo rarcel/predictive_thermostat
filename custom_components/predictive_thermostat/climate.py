@@ -4,7 +4,11 @@ import math
 from typing import Any
 
 from homeassistant.components.climate import ClimateEntity
-from homeassistant.components.climate.const import ClimateEntityFeature, HVACAction, HVACMode
+from homeassistant.components.climate.const import (
+    ClimateEntityFeature,
+    HVACAction,
+    HVACMode,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
@@ -34,7 +38,8 @@ class PredictiveThermostat(ClimateEntity):
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
     _attr_supported_features = (
         ClimateEntityFeature.TARGET_TEMPERATURE
-        | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
+        | ClimateEntityFeature.TURN_ON
+        | ClimateEntityFeature.TURN_OFF
     )
     _enable_turn_on_off_backwards_compatibility = False
 
@@ -54,9 +59,11 @@ class PredictiveThermostat(ClimateEntity):
         self._attr_hvac_mode = HVACMode.OFF
 
     def _display(self, value: float) -> float:
-        return float(TemperatureConverter.convert(
-            value, UnitOfTemperature.CELSIUS, self.temperature_unit
-        ))
+        return float(
+            TemperatureConverter.convert(
+                value, UnitOfTemperature.CELSIUS, self.temperature_unit
+            )
+        )
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -77,25 +84,42 @@ class PredictiveThermostat(ClimateEntity):
         self._attr_available = runtime.indoor is not None
         self._attr_hvac_mode = HVACMode.HEAT if runtime.heat else HVACMode.OFF
         self._attr_hvac_action = (
-            HVACAction.OFF if runtime.settings.observation_only
-            else None if core.observed is None
-            else HVACAction.HEATING if core.observed
-            else HVACAction.IDLE if runtime.heat else HVACAction.OFF
+            HVACAction.OFF
+            if runtime.settings.observation_only
+            else None
+            if core.observed is None
+            else HVACAction.HEATING
+            if core.observed
+            else HVACAction.IDLE
+            if runtime.heat
+            else HVACAction.OFF
         )
         outdoor = temperature(
-            self.hass, resolve(self.hass, runtime.sources[CONF_OUTDOOR]), self.temperature_unit
+            self.hass,
+            resolve(self.hass, runtime.sources[CONF_OUTDOOR]),
+            self.temperature_unit,
         )
         self._attr_extra_state_attributes = {
-            "control_state": "observation" if runtime.settings.observation_only else runtime.decision.state,
+            "control_state": "observation"
+            if runtime.settings.observation_only
+            else runtime.decision.state,
             "observation_only": runtime.settings.observation_only,
             "outdoor_temperature": outdoor,
             "heater_available": core.observed is not None,
             "fault_reason": core.fault,
-            "pending_command": "on" if core.pending is True else "off" if core.pending is False else None,
+            "pending_command": "on"
+            if core.pending is True
+            else "off"
+            if core.pending is False
+            else None,
             "fallback_reason": (
-                "indoor_unavailable" if runtime.indoor is None
-                else "outdoor_unavailable" if outdoor is None
-                else "heater_unavailable" if core.observed is None else None
+                "indoor_unavailable"
+                if runtime.indoor is None
+                else "outdoor_unavailable"
+                if outdoor is None
+                else "heater_unavailable"
+                if core.observed is None
+                else None
             ),
         }
         self.async_write_ha_state()
@@ -109,13 +133,22 @@ class PredictiveThermostat(ClimateEntity):
 
     async def async_set_temperature(self, **kwargs: Any) -> None:
         value = kwargs.get("temperature")
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+        ):
             raise ServiceValidationError("A finite target temperature is required")
-        target = float(TemperatureConverter.convert(
-            value, self.temperature_unit, UnitOfTemperature.CELSIUS
-        ))
+        target = float(
+            TemperatureConverter.convert(
+                value, self.temperature_unit, UnitOfTemperature.CELSIUS
+            )
+        )
         settings = self.runtime.settings
-        if not math.isfinite(target) or not settings.min_temperature <= target <= settings.max_temperature:
+        if (
+            not math.isfinite(target)
+            or not settings.min_temperature <= target <= settings.max_temperature
+        ):
             raise ServiceValidationError("Target temperature outside configured limits")
         mode = kwargs.get("hvac_mode")
         if mode is not None and mode not in (HVACMode.OFF, HVACMode.HEAT):
@@ -131,4 +164,3 @@ class PredictiveThermostat(ClimateEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self.async_set_hvac_mode(HVACMode.OFF)
-

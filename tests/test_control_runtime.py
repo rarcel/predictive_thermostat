@@ -1,0 +1,127 @@
+"""End-to-end simulated switch control, entirely inside the HA test harness."""
+
+from homeassistant.helpers import entity_component
+from homeassistant.helpers import entity_registry as er
+
+from custom_components.predictive_thermostat.const import DOMAIN
+from custom_components.predictive_thermostat.settings import Settings
+
+
+async def _entity(hass, entry):
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    entity_id = er.async_get(hass).async_get_entity_id(
+        "climate", DOMAIN, entry.unique_id
+    )
+    component = hass.data[entity_component.DATA_INSTANCES]["climate"]
+    return entity_id, component.get_entity(entity_id)
+
+
+async def test_hardware_mode_uses_one_confirmed_switch_command(hass, entry):
+    hass.config_entries.async_update_entry(
+        entry,
+        options={
+            "settings": Settings(
+                observation_only=False,
+                min_on=1,
+                min_off=1,
+                cooldown=1,
+                command_timeout=30,
+                cold_tolerance=0.1,
+                hot_tolerance=0.1,
+            ).as_dict()
+        },
+    )
+    calls = []
+
+    async def turn_on(on):
+        calls.append("on")
+        hass.states.async_set("switch.heater", "on")
+
+    async def turn_off(on):
+        calls.append("off")
+        hass.states.async_set("switch.heater", "off")
+
+    entity_id, thermostat = await _entity(hass, entry)
+    thermostat.runtime.adapter.command = turn_on
+    thermostat.runtime.core.since -= 2
+    await hass.services.async_call(
+        "climate",
+        "set_temperature",
+        {"entity_id": entity_id, "temperature": 22, "hvac_mode": "heat"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+    assert calls == ["on"]
+    assert hass.states.get("switch.heater").state == "on"
+    assert hass.states.get(entity_id).attributes["control_state"] == "heating"
+    thermostat.runtime.core.since -= 2
+    thermostat.runtime.adapter.command = turn_off
+    hass.states.async_set("sensor.inside", "23", {"unit_of_measurement": "°C"})
+    await hass.async_block_till_done()
+    assert calls == ["on", "off"]
+
+
+async def test_observation_never_calls_registered_switch_service(hass, entry):
+    calls = []
+
+    async def record(call):
+        calls.append(call)
+
+    hass.services.async_register("switch", "turn_on", record)
+    hass.services.async_register("switch", "turn_off", record)
+    entity_id, thermostat = await _entity(hass, entry)
+    thermostat.runtime.core.since -= 99999
+    await hass.services.async_call(
+        "climate",
+        "set_temperature",
+        {"entity_id": entity_id, "temperature": 22, "hvac_mode": "heat"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+    assert not calls
+    assert hass.states.get("switch.heater").state == "off"
+    assert hass.states.get(entity_id).attributes["control_state"] == "observation"
+
+
+async def test_actuator_unavailable_latches_fault_without_service(hass, entry):
+    hass.config_entries.async_update_entry(
+        entry, options={"settings": Settings(observation_only=False).as_dict()}
+    )
+    calls = []
+
+    async def record(call):
+        calls.append(call)
+
+    hass.services.async_register("switch", "turn_on", record)
+    entity_id, thermostat = await _entity(hass, entry)
+    hass.states.async_set("switch.heater", "unavailable")
+    await hass.async_block_till_done()
+    await hass.services.async_call(
+        "climate",
+        "set_hvac_mode",
+        {"entity_id": entity_id, "hvac_mode": "heat"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+    assert thermostat.runtime.core.fault == "actuator_unavailable"
+    assert hass.states.get(entity_id).attributes["control_state"] == "fault"
+    assert not calls
+
+
+async def test_unload_never_commands_the_switch(hass, entry):
+    hass.config_entries.async_update_entry(
+        entry, options={"settings": Settings(observation_only=False).as_dict()}
+    )
+    calls = []
+
+    async def record(call):
+        calls.append(call)
+
+    hass.services.async_register("switch", "turn_on", record)
+    hass.services.async_register("switch", "turn_off", record)
+    _, thermostat = await _entity(hass, entry)
+    thermostat.runtime.core.observe(True)
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert not calls

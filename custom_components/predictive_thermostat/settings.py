@@ -1,7 +1,7 @@
 """Validated hardware-dependent settings, independent of Home Assistant."""
 
-from dataclasses import asdict, dataclass, fields
 import math
+from dataclasses import asdict, dataclass, fields
 from typing import Any
 
 
@@ -29,9 +29,19 @@ class Settings:
             if item.name in ("observation_only", "inverted"):
                 if type(value) is not bool:
                     raise ValueError(item.name)
-            elif isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            elif (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not math.isfinite(value)
+            ):
                 raise ValueError(item.name)
-        for key in ("min_on", "min_off", "cooldown", "command_timeout", "sensor_max_age"):
+        for key in (
+            "min_on",
+            "min_off",
+            "cooldown",
+            "command_timeout",
+            "sensor_max_age",
+        ):
             if not 1 <= getattr(self, key) <= 86400:
                 raise ValueError(key)
         for key in ("cold_tolerance", "hot_tolerance", "target_step"):
@@ -45,10 +55,9 @@ class Settings:
             raise ValueError("target_step")
 
     @classmethod
-    def from_dict(cls, value: dict[str, Any]) -> "Settings":
+    def from_dict(cls, value: dict[str, Any]) -> Settings:
         """Reject unknown settings rather than silently discarding them."""
         return cls(**value)
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
-

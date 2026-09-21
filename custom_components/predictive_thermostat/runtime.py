@@ -1,18 +1,25 @@
 """Serialize decisions, confirmations, persistence and cancellable deadlines."""
 
 import asyncio
+import logging
+import math
 from collections.abc import Callable
 from contextlib import suppress
 from datetime import datetime
-import logging
-import math
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CoreState, EVENT_HOMEASSISTANT_STARTED, UnitOfTemperature
-from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.const import (
+    EVENT_HOMEASSISTANT_STARTED,
+    UnitOfTemperature,
+)
+from homeassistant.core import CoreState, Event, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.event import async_call_later, async_track_state_change_event, async_track_state_report_event
+from homeassistant.helpers.event import (
+    async_call_later,
+    async_track_state_change_event,
+    async_track_state_report_event,
+)
 from homeassistant.util import dt as dt_util
 
 from .const import CONF_HEATER, CONF_INDOOR
@@ -28,12 +35,16 @@ _LOGGER = logging.getLogger(__name__)
 class ControlRuntime:
     """One runtime per zone; no overlapping command or persistence operations."""
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, changed: Callable[[], None]) -> None:
+    def __init__(
+        self, hass: HomeAssistant, entry: ConfigEntry, changed: Callable[[], None]
+    ) -> None:
         self.hass, self.entry, self.changed = hass, entry, changed
         self.sources = configured_sources(entry)
         self.settings = Settings.from_dict(dict(entry.options.get("settings", {})))
         self.core = CycleController(self.settings, hass.loop.time)
-        self.adapter = SwitchAdapter(hass, self.sources[CONF_HEATER], self.settings.inverted)
+        self.adapter = SwitchAdapter(
+            hass, self.sources[CONF_HEATER], self.settings.inverted
+        )
         self.store = ControlStore(hass, entry.entry_id)
         self.heat = False
         self.target = self.settings.initial_target
@@ -58,24 +69,48 @@ class ControlRuntime:
             saved = await self.store.async_load()
             if saved is not None:
                 self._restore(saved)
-        except (Exception,):
+        except Exception:
             # Do not print store contents, entity names, or exception payloads.
             self.core.fail("storage_invalid")
         self._running = True
-        self._listeners.append(self.hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, self._registry_changed))
+        self._listeners.append(
+            self.hass.bus.async_listen(
+                er.EVENT_ENTITY_REGISTRY_UPDATED, self._registry_changed
+            )
+        )
         if not self._ready:
-            self._listeners.append(self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, self._started))
+            self._listeners.append(
+                self.hass.bus.async_listen_once(
+                    EVENT_HOMEASSISTANT_STARTED, self._started
+                )
+            )
         self._subscribe()
         self.request()
 
     def _restore(self, saved: dict[str, Any]) -> None:
-        if saved.get("schema_version") != 1 or type(saved.get("pending")) is not bool or type(saved.get("heat")) is not bool or type(saved.get("observation_only")) is not bool:
+        if (
+            saved.get("schema_version") != 1
+            or type(saved.get("pending")) is not bool
+            or type(saved.get("heat")) is not bool
+            or type(saved.get("observation_only")) is not bool
+        ):
             raise ValueError("Invalid storage")
         target = saved["target"]
-        if isinstance(target, bool) or not isinstance(target, (int, float)) or not math.isfinite(target):
+        if (
+            isinstance(target, bool)
+            or not isinstance(target, (int, float))
+            or not math.isfinite(target)
+        ):
             raise ValueError("Invalid target")
         fault = saved.get("fault")
-        if fault is not None and fault not in {"command_timeout", "command_failed", "actuator_unavailable", "storage_invalid", "storage_failed", "command_interrupted"}:
+        if fault is not None and fault not in {
+            "command_timeout",
+            "command_failed",
+            "actuator_unavailable",
+            "storage_invalid",
+            "storage_failed",
+            "command_interrupted",
+        }:
             raise ValueError("Invalid fault")
         reset = self.entry.options.get("reset_fault_token")
         if reset == saved.get("reset_fault_token"):
@@ -84,13 +119,21 @@ class ControlRuntime:
             elif saved["pending"]:
                 self.core.fail("command_interrupted")
         if saved.get("sources") == self.sources:
-            self.target = min(self.settings.max_temperature, max(self.settings.min_temperature, float(target)))
+            self.target = min(
+                self.settings.max_temperature,
+                max(self.settings.min_temperature, float(target)),
+            )
             # Enabling hardware never resumes a dry-run demand automatically.
-            self.heat = saved["heat"] and saved["observation_only"] == self.settings.observation_only
+            self.heat = (
+                saved["heat"]
+                and saved["observation_only"] == self.settings.observation_only
+            )
 
     def _snapshot(self, pending: bool = False) -> dict[str, Any]:
         return {
-            "schema_version": 1, "heat": self.heat, "target": self.target,
+            "schema_version": 1,
+            "heat": self.heat,
+            "target": self.target,
             "fault": self.core.fault,
             "pending": pending or self._in_flight or self.core.pending is not None,
             "sources": self.sources,
@@ -119,7 +162,9 @@ class ControlRuntime:
     def _subscribe(self) -> None:
         for remove in self._source_listeners:
             remove()
-        ids = [value for ref in self.sources.values() if (value := resolve(self.hass, ref))]
+        ids = [
+            value for ref in self.sources.values() if (value := resolve(self.hass, ref))
+        ]
         self._source_listeners = [
             async_track_state_change_event(self.hass, ids, self._source_changed),
             async_track_state_report_event(self.hass, ids, self._source_changed),
@@ -133,10 +178,16 @@ class ControlRuntime:
     @callback
     def _source_changed(self, event: Event[Any]) -> None:
         # Record every actuator transition, even while service I/O is awaiting.
-        if self._ready and event.data["entity_id"] == resolve(self.hass, self.sources[CONF_HEATER]):
+        if self._ready and event.data["entity_id"] == resolve(
+            self.hass, self.sources[CONF_HEATER]
+        ):
             state = event.data.get("new_state")
             value = None
-            if state is not None and not state.attributes.get("restored") and state.state in ("on", "off"):
+            if (
+                state is not None
+                and not state.attributes.get("restored")
+                and state.state in ("on", "off")
+            ):
                 value = (state.state == "on") != self.settings.inverted
             self.core.observe(value)
         self.request()
@@ -147,7 +198,9 @@ class ControlRuntime:
             return
         self._dirty = True
         if self._task is None or self._task.done():
-            self._task = self.hass.async_create_task(self._drain(), "predictive thermostat decision", eager_start=False)
+            self._task = self.hass.async_create_task(
+                self._drain(), "predictive thermostat decision", eager_start=False
+            )
 
     def _read(self) -> None:
         self.core.observe(self.adapter.observed())
@@ -163,7 +216,9 @@ class ControlRuntime:
         if report != self._report:
             self._report = report
             age = max(0.0, (dt_util.utcnow() - state.last_reported).total_seconds())
-            self.expires = self.core.clock() + max(0.0, self.settings.sensor_max_age - age)
+            self.expires = self.core.clock() + max(
+                0.0, self.settings.sensor_max_age - age
+            )
         if self.expires is not None and self.core.clock() >= self.expires:
             self.indoor = None
 
@@ -204,10 +259,17 @@ class ControlRuntime:
         await self._save()
         self.decision = self.core.decide(self.heat, self.target, self.indoor)
         if self.core.fault and self.core.fault != self._logged_fault:
-            _LOGGER.error("Heater control stopped: %s; explicit fault reset required", self.core.fault)
+            _LOGGER.error(
+                "Heater control stopped: %s; explicit fault reset required",
+                self.core.fault,
+            )
             self._logged_fault = self.core.fault
         now = self.core.clock()
-        deadlines = [d for d in (self.decision.deadline, self.expires) if d is not None and d > now]
+        deadlines = [
+            d
+            for d in (self.decision.deadline, self.expires)
+            if d is not None and d > now
+        ]
         if deadlines and self._running:
             self._timer = async_call_later(self.hass, min(deadlines) - now, self._wake)
         if self._running:

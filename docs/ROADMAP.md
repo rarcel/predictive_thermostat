@@ -19,7 +19,7 @@ Implémentation locale 0.1.0 : entité passive OFF/observation, choix génériqu
 - entité climate sans commande prédictive ;
 - tests de base et CI.
 
-## Étape 2 — Thermostat sûr non prédictif
+## Étape 2 — Thermostat sûr non prédictif (0.2.0)
 
 - lecture sonde intérieure ;
 - adapter `switch` ;
@@ -27,6 +27,8 @@ Implémentation locale 0.1.0 : entité passive OFF/observation, choix génériqu
 - hystérésis, durée minimale de marche, cooldown ;
 - réconciliation et timeouts ;
 - tests de machine à états.
+
+Implémenté dans le dépôt : contrôleur de cycle pur à horloge injectée, adaptateur `switch`, persistance privée versionnée, reprise prudente, timeout et défaut verrouillé, Options Flow de protections et mode observation par défaut. Le contrôle réel n'est effectué qu'après désactivation explicite du mode observation ; aucun déploiement ou essai matériel n'est réalisé par le projet.
 
 Ce jalon doit être fiable avant tout apprentissage.
 

@@ -13,6 +13,7 @@ from custom_components.predictive_thermostat.const import (
     CONF_OUTDOOR,
     DOMAIN,
 )
+from custom_components.predictive_thermostat.settings import Settings
 
 
 async def test_user_flow(hass, inputs, no_services):
@@ -110,6 +111,8 @@ async def test_options_reload(hass, inputs, entry, no_services):
                 CONF_INDOOR: "sensor.replacement",
                 CONF_OUTDOOR: inputs[CONF_OUTDOOR],
                 CONF_HEATER: inputs[CONF_HEATER],
+                **Settings().as_dict(),
+                "reset_fault": False,
             },
         )
         await hass.async_block_till_done()
@@ -120,3 +123,18 @@ async def test_options_reload(hass, inputs, entry, no_services):
     hass.states.async_set("sensor.inside", "30", {"unit_of_measurement": "°C"})
     await hass.async_block_till_done()
     assert hass.states.get(entity_id).attributes["current_temperature"] == 22
+
+
+async def test_options_rejects_unsafe_duration(hass, inputs, entry, no_services):
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    invalid = {
+        **{key: value for key, value in inputs.items() if key != CONF_NAME},
+        **Settings().as_dict(),
+        "min_on": 0,
+        "reset_fault": False,
+    }
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], invalid
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "invalid_setting"}

@@ -13,7 +13,7 @@ async def test_unload_reload(hass, entry, no_services):
     registry = er.async_get(hass)
     entity_id = registry.async_get_entity_id("climate", DOMAIN, entry.unique_id)
     with patch(
-        "custom_components.predictive_thermostat.climate.ObservationThermostat._refresh"
+        "custom_components.predictive_thermostat.climate.PredictiveThermostat._refresh"
     ) as refresh:
         assert await hass.config_entries.async_unload(entry.entry_id)
         hass.states.async_set("sensor.inside", "21", {"unit_of_measurement": "°C"})

@@ -18,18 +18,33 @@
       "not_temperature": "Choisissez une sonde de température.",
       "same_sensor": "Choisissez deux sondes distinctes.",
       "heater_in_use": "Ce chauffage est déjà associé à une autre zone.",
-      "empty_name": "Saisissez un nom de zone."
+      "empty_name": "Saisissez un nom de zone.",
+      "invalid_setting": "Vérifiez les réglages de sécurité et les limites de température."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Modifier les sources",
-        "description": "Observation uniquement. Les changements rechargent cette intégration sans commander le chauffage.",
+        "title": "Sources et réglages de sécurité",
+        "description": "Le mode observation est activé par défaut. Le désactiver autorise le mode HEAT manuel après vérification de chaque valeur matérielle et des contrôleurs concurrents.",
         "data": {
           "indoor_sensor": "Sonde de température intérieure",
           "outdoor_sensor": "Sonde de température extérieure",
-          "heater": "Interrupteur du chauffage (observation uniquement)"
+          "heater": "Interrupteur du chauffage",
+          "observation_only": "Mode observation",
+          "inverted": "Logique de l’interrupteur inversée",
+          "min_on": "Durée minimale de marche (secondes)",
+          "min_off": "Durée minimale d’arrêt (secondes)",
+          "cooldown": "Refroidissement après arrêt (secondes)",
+          "command_timeout": "Délai de confirmation de commande (secondes)",
+          "sensor_max_age": "Âge maximal de la sonde intérieure (secondes)",
+          "cold_tolerance": "Hystérésis de démarrage (°C)",
+          "hot_tolerance": "Hystérésis d’arrêt (°C)",
+          "min_temperature": "Consigne minimale (°C)",
+          "max_temperature": "Consigne maximale (°C)",
+          "target_step": "Pas de consigne (°C)",
+          "initial_target": "Consigne initiale (°C)",
+          "reset_fault": "Acquitter et réinitialiser un défaut verrouillé"
         }
       }
     },
@@ -38,7 +53,8 @@
       "not_temperature": "Choisissez une sonde de température.",
       "same_sensor": "Choisissez deux sondes distinctes.",
       "heater_in_use": "Ce chauffage est déjà associé à une autre zone.",
-      "empty_name": "Saisissez un nom de zone."
+      "empty_name": "Saisissez un nom de zone.",
+      "invalid_setting": "Vérifiez les réglages de sécurité et les limites de température."
     }
   }
 }

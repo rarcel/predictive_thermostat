@@ -2,7 +2,6 @@
 
 import pytest
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
 
@@ -19,8 +18,8 @@ async def test_observation(hass, entry, no_services):
     entity_id = await loaded(hass, entry)
     state = hass.states.get(entity_id)
     assert state.state == "off"
-    assert state.attributes["hvac_modes"] == ["off"]
-    assert state.attributes["supported_features"] == 0
+    assert state.attributes["hvac_modes"] == ["off", "heat"]
+    assert state.attributes["supported_features"] > 0
     assert state.attributes["current_temperature"] == 20
     assert state.attributes["outdoor_temperature"] == 8
     assert state.attributes["control_state"] == "observation"
@@ -60,12 +59,14 @@ async def test_fahrenheit_display(hass, entry, no_services):
     ] == pytest.approx(46.4)
 
 
-async def test_conversion_overflow_is_unavailable(hass, entry, no_services):
+async def test_large_finite_temperature_is_not_used_to_heat(hass, entry, no_services):
     hass.config.units = US_CUSTOMARY_SYSTEM
     entity_id = await loaded(hass, entry)
     hass.states.async_set("sensor.inside", "1.7e308", {"unit_of_measurement": "°C"})
     await hass.async_block_till_done()
-    assert hass.states.get(entity_id).state == "unavailable"
+    state = hass.states.get(entity_id)
+    assert state.state == "off"
+    assert state.attributes["observation_only"] is True
 
 
 async def test_source_rename_and_removal(hass, entry, no_services):
@@ -93,7 +94,7 @@ async def test_missing_outdoor_and_heater(hass, entry, no_services):
     assert state.attributes["fallback_reason"] == "outdoor_unavailable"
 
 
-async def test_services_cannot_control_heater(hass, entry):
+async def test_observation_accepts_manual_controls_without_switch_commands(hass, entry):
     entity_id = await loaded(hass, entry)
     # Dummy switch services detect commands while climate services run normally.
     calls = []
@@ -115,9 +116,8 @@ async def test_services_cannot_control_heater(hass, entry):
         ("turn_on", {}),
         ("turn_off", {}),
     ]:
-        with pytest.raises(HomeAssistantError):
-            await hass.services.async_call(
-                "climate", service, {"entity_id": entity_id, **data}, blocking=True
-            )
+        await hass.services.async_call(
+            "climate", service, {"entity_id": entity_id, **data}, blocking=True
+        )
     assert not calls
     assert hass.states.get("switch.heater").state == "off"

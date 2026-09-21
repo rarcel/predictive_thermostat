@@ -1,7 +1,7 @@
 """Pure state-machine tests; time advances without sleep or Home Assistant."""
 
-from dataclasses import replace
 import random
+from dataclasses import replace
 
 import pytest
 
@@ -11,6 +11,7 @@ from custom_components.predictive_thermostat.settings import Settings
 
 class Clock:
     now = 0.0
+
     def __call__(self):
         return self.now
 
@@ -18,7 +19,9 @@ class Clock:
 @pytest.fixture
 def controller():
     clock = Clock()
-    return CycleController(Settings(min_on=30, min_off=20, cooldown=40, command_timeout=10), clock), clock
+    return CycleController(
+        Settings(min_on=30, min_off=20, cooldown=40, command_timeout=10), clock
+    ), clock
 
 
 def test_reconcile_cooldown_pending_confirmation(controller):
@@ -99,19 +102,38 @@ def test_randomized_cycle_invariants(controller):
     commands = []
     for _ in range(3000):
         clock.now += randomizer.random() * 3
-        decision = core.decide(randomizer.choice([True, True, False]), 20, randomizer.choice([15, 19.9, 25, None]))
+        decision = core.decide(
+            randomizer.choice([True, True, False]),
+            20,
+            randomizer.choice([15, 19.9, 25, None]),
+        )
         if decision.command is not None:
-            duration = core.settings.min_on if core.observed else max(core.settings.min_off, core.settings.cooldown)
+            duration = (
+                core.settings.min_on
+                if core.observed
+                else max(core.settings.min_off, core.settings.cooldown)
+            )
             assert clock.now - core.since >= duration
             core.start_command(decision.command)
             assert core.decide(True, 20, 15).command is None
             commands.append(decision.command)
             core.observe(decision.command)
     assert len(commands) > 20
-    assert all(a != b for a, b in zip(commands, commands[1:]))
+    assert all(a != b for a, b in zip(commands, commands[1:], strict=False))
 
 
-@pytest.mark.parametrize("field,value", [("min_on", 0), ("cooldown", -1), ("cold_tolerance", float("nan")), ("command_timeout", float("inf")), ("inverted", "yes"), ("initial_target", 99), ("target_step", 0)])
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("min_on", 0),
+        ("cooldown", -1),
+        ("cold_tolerance", float("nan")),
+        ("command_timeout", float("inf")),
+        ("inverted", "yes"),
+        ("initial_target", 99),
+        ("target_step", 0),
+    ],
+)
 def test_invalid_settings(field, value):
     with pytest.raises(ValueError):
         replace(Settings(), **{field: value})

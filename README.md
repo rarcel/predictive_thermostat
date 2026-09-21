@@ -1,107 +1,83 @@
 # Predictive Thermostat
 
-Custom integration Home Assistant générique, locale et paramétrable pour les chauffages à forte inertie, en premier lieu les poêles à granulés. À terme, chaque point du planning interne exprimera une **température à atteindre à une heure donnée**, avec anticipation selon les températures intérieure/extérieure et un modèle thermique explicable.
+`predictive_thermostat` est une custom integration Home Assistant locale et paramétrable, conçue d'abord pour des chauffages à forte inertie tels qu'un poêle à granulés. Elle expose **une seule entité `climate` principale par zone**. Son planning interne futur signifiera toujours « température à atteindre à cette heure » ; la température extérieure servira à une prédiction explicable, locale et légère.
 
-## Version actuelle : 0.1.0 — observation uniquement
+## Version actuelle : 0.2.0 — thermostat sûr, sans prédiction
 
-Ce premier jalon crée **une seule entité climate par zone**, avec un appareil virtuel et une configuration via l'interface. Les sources sont choisies librement : aucune dépendance aux entités d'une installation particulière, à ESPHome ou à Zigbee2MQTT.
+Cette étape apporte `OFF` et `HEAT` manuels, une consigne, un adaptateur `switch` et un contrôleur de cycle centralisé. Le planning, `AUTO`, la prédiction et l'apprentissage ne sont pas encore disponibles. Le modèle futur ne pourra jamais augmenter la consigne au-delà de la cible manuelle ou planifiée, ni contourner les protections matérielles.
 
-**Cette version ne chauffe pas.** Elle ne contient aucun appel de service de chauffage, y compris au démarrage, au rechargement, à la suppression ou au passage OFF. Le thermostat existant continue à piloter le matériel. OFF désigne l'absence de demande de cette intégration : ce n'est ni une commande d'arrêt du poêle ni une indication de son état physique.
+L'intégration est créée en **mode observation**. Dans ce mode, elle calcule la décision qui serait prise mais n'appelle jamais le switch. Pour autoriser le mode HEAT réel, il faut désactiver explicitement cette option après avoir vérifié le câblage, la polarité, les délais constructeur et l'absence de contrôleur concurrent. Cette documentation ne déploie ni ne modifie aucune installation Home Assistant.
 
-Fonctionnalités présentes :
+Le contrôleur applique, dans cet ordre :
 
-- Config Flow et Options Flow pour sélectionner/changer les deux sondes et le switch ;
-- identité stable par zone, préservée lors des changements de sources ;
-- suivi des renommages des sources enregistrées dans le registre HA ;
-- affichage des mesures avec conversion °C/°F vers les unités configurées dans HA ;
-- état dégradé en cas de mesure invalide ou d'actionneur indisponible ;
-- diagnostics sans identifiants privés et traductions française/anglaise.
+- une hystérésis configurable autour de la consigne ;
+- une durée minimale de marche ;
+- une durée minimale d'arrêt et un cooldown après arrêt ;
+- une commande en attente jusqu'à confirmation de l'état réel ;
+- un verrouillage de défaut en cas de switch indisponible, erreur ou timeout, sans nouvelle tentative rapide.
 
-Le planning, les consignes manuelles, la régulation, les protections de cycle, les prédictions et l'apprentissage **ne sont pas encore implémentés**. Il n'y a donc pas encore de prédictions à comparer. Ces fonctions seront livrées selon [la feuille de route](docs/ROADMAP.md), avec observation avant activation réelle et protections matérielles prioritaires sur le prédictif.
+Une donnée intérieure absente, invalide ou trop ancienne conduit à une demande d'arrêt conservatrice ; la durée minimale de marche reste prioritaire. Après un redémarrage, l'état réel du switch est relu avant toute décision. Une commande interrompue est verrouillée jusqu'à acquittement explicite dans les options.
 
 ## Prérequis
 
-- Home Assistant **2026.9.3**, version actuellement testée ; les autres versions ne sont pas encore validées.
-- Deux entités `sensor` distinctes avec `device_class: temperature` et unité °C ou °F. Choisir des sondes locales pour conserver un fonctionnement entièrement local.
-- Une entité `switch` représentant la demande de chauffage, uniquement observée dans cette version. Une entité enregistrée temporairement indisponible peut être sélectionnée : aucun essai d'allumage n'est effectué.
+- Home Assistant **2026.9.3**, version validée par la suite de tests.
+- Deux entités `sensor` distinctes de classe `temperature`, en °C ou °F, pour l'intérieur et l'extérieur.
+- Une entité `switch` qui représente de façon fiable une demande de chauffage. L'intégration ne déduit pas une flamme, une température de fumées ou un défaut matériel.
+- Les valeurs documentées par le fabricant pour les durées d'allumage, d'extinction et les restrictions de cycles. Les valeurs proposées sont des valeurs de départ, jamais une garantie de compatibilité matérielle.
 
-Il n'est pas nécessaire d'installer Python manuellement sur Home Assistant OS. Python ≥ 3.14.2 concerne l'environnement de développement conforme à la version HA ciblée. Aucun helper supplémentaire n'est requis.
+Les sources sont choisies au moment de la configuration ; aucune entité propre à une installation, aucun helper et aucun cloud ne sont requis.
 
 ## Installation manuelle
 
-Ces instructions décrivent les opérations à effectuer vous-même sur l'instance choisie. Les tests de ce dépôt ne déploient rien automatiquement dans Home Assistant. Pour une première découverte, une instance de test est recommandée.
+Effectuez ces opérations sur l'instance Home Assistant de votre choix, de préférence une instance de test.
 
-1. Récupérer le contenu de ce dépôt (copie locale ou archive).
-2. Dans le répertoire de configuration Home Assistant, celui qui contient `configuration.yaml`, créer `custom_components` s'il n'existe pas.
-3. Copier **uniquement** le dossier `custom_components/predictive_thermostat` du dépôt dans ce répertoire. Ne pas copier l'environnement de développement, les tests ou l'audit personnel.
-4. Vérifier que le manifeste est directement à l'emplacement ci-dessous, sans niveau de dossier supplémentaire :
+1. Récupérez le dépôt.
+2. Dans le répertoire qui contient `configuration.yaml`, créez `custom_components` si nécessaire.
+3. Copiez uniquement `custom_components/predictive_thermostat` dans ce dossier.
+4. Vérifiez que `manifest.json` est directement sous `<configuration>/custom_components/predictive_thermostat/`.
+5. Redémarrez Home Assistant.
+6. Ouvrez **Paramètres → Appareils et services → Ajouter une intégration**, recherchez **Predictive Thermostat**, puis sélectionnez le nom de zone, les deux sondes et le switch.
 
-   ```text
-   <configuration Home Assistant>/
-     configuration.yaml
-     custom_components/
-       predictive_thermostat/
-         __init__.py
-         manifest.json
-         const.py
-         config_flow.py
-         climate.py
-         sources.py
-         diagnostics.py
-         strings.json
-         translations/
-           en.json
-           fr.json
-   ```
+Sur Home Assistant OS et Home Assistant Container, le répertoire de configuration est en général `/config`. N'ajoutez aucun bloc YAML `predictive_thermostat:` et ne remplacez jamais `generic_thermostat` du Core.
 
-   Sur Home Assistant OS, le répertoire de configuration est généralement `/config`. Sur Home Assistant Container, il correspond au volume monté dans `/config`.
-5. Redémarrer Home Assistant pour charger la nouvelle intégration.
-6. Ouvrir **Paramètres → Appareils et services → Ajouter une intégration**, puis rechercher **Predictive Thermostat**.
-7. Saisir un nom de zone, sélectionner les sondes intérieure/extérieure et le switch de chauffage. Valider : une entité climate est créée, sans commande du switch.
+## Utilisation sûre
 
-Ne pas ajouter de bloc `predictive_thermostat:` dans `configuration.yaml` : la configuration se fait exclusivement par Config Entry. Ne pas remplacer le dossier Core `generic_thermostat`.
+L'entité climate démarre en `OFF`, avec le mode observation actif. Une consigne et les modes `OFF`/`HEAT` sont proposés pour permettre l'observation de la décision de cycle. Aucune action sur l'entité ne commande alors le switch.
 
-La distribution HACS et la publication officielle ne font pas partie de ce jalon. L'installation documentée est manuelle ; aucune URL de dépôt public n'est présumée.
+Pour préparer un essai contrôlé sur une instance de test, ouvrez **Configurer / Options** de l'intégration et renseignez toutes les options :
 
-## Utilisation et paramètres
-
-L'entité affiche la température intérieure et le mode OFF uniquement. Elle ne propose ni consigne ni mode HEAT/AUTO. Ses attributs :
-
-| Attribut | Signification |
+| Option | Rôle |
 | --- | --- |
-| `control_state` | Toujours `observation` dans ce jalon |
-| `observation_only` | Toujours `true`, non désactivable dans cette version |
-| `outdoor_temperature` | Température extérieure dans les mêmes unités HA que l'intérieur, ou `null` |
-| `heater_available` | Le switch sélectionné a un état on/off ; cela ne confirme pas une flamme |
-| `fallback_reason` | Source intérieure, extérieure ou actionneur indisponible/invalide, sinon `null` |
+| `Mode observation` | Laisser activé tant que l'essai réel n'est pas explicitement décidé. Désactivé, le switch peut être commandé. |
+| `Logique de l’interrupteur inversée` | À activer seulement si `on` signifie physiquement « pas de demande ». |
+| `Durée minimale de marche`, `Durée minimale d’arrêt`, `Refroidissement` | Protections de cycle en secondes, à définir d'après la documentation matérielle. |
+| `Délai de confirmation de commande` | Durée maximale pendant laquelle l'intégration attend le nouvel état du switch. |
+| `Âge maximal de la sonde intérieure` | Au-delà, la température est considérée inconnue. |
+| `Hystérésis` | Écart de démarrage et d'arrêt autour de la consigne. |
+| Limites, pas et consigne initiale | Bornes de la consigne ; ces valeurs sont stockées en °C, indépendamment de l'unité d'affichage HA. |
 
-Une mesure intérieure manquante ou invalide rend l'entité indisponible. La perte de l'extérieur ou du switch conserve l'affichage intérieur avec un état dégradé. Les dernières mesures numériques sont affichées telles que fournies par les sources : **ce jalon ne détecte pas encore une mesure figée mais toujours numérique**. Il n'en tire aucune décision de chauffe.
+Les changements d'options rechargent proprement l'intégration. Vérifiez que l'actionneur n'est pas aussi piloté par une automatisation, un thermostat ou un autre composant : l'intégration ne les désactive pas et ne les modifie pas. Un même switch ne peut pas être associé à deux zones Predictive Thermostat.
 
-Pour changer les sources, ouvrir l'intégration dans **Paramètres → Appareils et services**, puis son bouton **Configurer / Options** selon l'interface. Le changement recharge uniquement cette intégration ; l'identité de la zone est conservée. Un même actionneur ne peut pas être attribué à deux zones de Predictive Thermostat. Le composant ne vérifie pas les autres contrôleurs utilisant cet actionneur et ne les modifie pas.
+En cas de défaut verrouillé, corrigez d'abord sa cause puis cochez **Acquitter et réinitialiser un défaut verrouillé** dans les options. Cette action recharge l'intégration ; elle ne force pas de commande immédiate. Les attributs `control_state`, `fault_reason`, `pending_command`, `heater_available` et `fallback_reason` permettent d'examiner la situation sans exposer les références privées des sources dans les diagnostics.
 
-Les sources enregistrées dans le registre HA sont suivies après renommage. Pour une source sans identité enregistrée, la référence reste son entity_id : après renommage, sélectionner la nouvelle source dans les options. Le nom de zone et l'entité peuvent être renommés par les fonctions habituelles de Home Assistant.
+## Limites de cette étape
 
-Les paramètres thermiques, durées minimales, cooldown, planning et limites de consigne seront configurables dans les futurs jalons. Aucun réglage propre à un logement n'est imposé. Le planning utilisera le fuseau configuré dans Home Assistant.
+- Pas de planning interne, de mode `AUTO`, de dérogation, de gestion DST ou de prédiction.
+- La température extérieure est déjà configurée et affichée, mais n'influence pas encore la décision. Elle sera une entrée de l'estimateur thermique local et explicable à l'étape suivante.
+- L'adaptateur V0.2 accepte un `switch` uniquement. Les scripts et entités climate comme actionneurs sont hors périmètre.
+- L'intégration ne remplace pas les sécurités internes, thermostats de sûreté ou notices du poêle.
 
-## Mise à jour et suppression
+## Mise à jour, suppression et dépannage
 
-Pour mettre à jour, remplacer uniquement le dossier de cette custom integration par celui de la nouvelle version, puis redémarrer Home Assistant. Lire les notes de version avant toute future version capable de commander le chauffage.
+Pour mettre à jour, remplacez le seul dossier de l'intégration puis redémarrez Home Assistant. Pour la retirer, supprimez d'abord son entrée dans **Appareils et services**, puis son dossier si aucune zone ne l'utilise. Le déchargement et la suppression n'envoient aucune commande au switch.
 
-Pour supprimer, retirer l'entrée Predictive Thermostat depuis **Appareils et services**. Si elle n'est plus utilisée pour aucune zone, retirer son dossier de custom_components, puis redémarrer. Cette version n'envoie pas d'ordre au chauffage lors de la suppression et ne modifie pas le thermostat existant.
+- **Sonde indisponible ou trop ancienne** : l'entité affiche l'état dégradé et n'émet aucune commande répétée.
+- **Switch indisponible** : le contrôle réel est verrouillé en défaut ; rétablissez le switch puis acquittez le défaut.
+- **Mode HEAT ne change rien** : vérifiez d'abord que le mode observation est toujours actif ; c'est le comportement prévu par défaut.
+- **Intégration absente** : vérifiez le chemin de `manifest.json`, redémarrez HA et consultez les journaux de chargement.
 
-## Dépannage
+Les diagnostics expurgent les noms et identifiants de sources, les mesures et les données d'apprentissage. Le stockage privé conserve seulement l'état de contrôle nécessaire à une reprise sûre ; il est versionné et validé avant lecture.
 
-- **Intégration absente de la recherche** : vérifier le chemin exact du manifeste, redémarrer HA et recharger la page du navigateur. Consulter les journaux pour les erreurs de chargement.
-- **Sonde absente du sélecteur** : vérifier son domaine sensor et sa classe temperature dans les attributs HA. Une sonde exposant seulement une unité sans classe de température n'est pas sélectionnable par ce flow.
-- **Zone indisponible** : vérifier la sonde intérieure et son unité. unknown, unavailable, NaN et infini ne sont pas des températures acceptées.
-- **Switch indisponible** : l'observation reste possible ; un appareil débranché peut expliquer cet état. Le composant ne tente aucune reconnexion par commande.
-- **Impossible d'allumer avec cette entité** : comportement normal de la version 0.1.0. Utiliser le contrôleur existant.
+## Développement
 
-Les diagnostics téléchargeables indiquent seulement la version de schéma, le mode observation et si les références des sources se résolvent. Ils n'incluent ni identifiants d'entités, ni nom de zone, ni mesures. Les états et références restent néanmoins stockés localement par les mécanismes habituels de Home Assistant.
-
-## Développement et validation
-
-Voir [DEVELOPMENT.md](docs/DEVELOPMENT.md) pour l'environnement isolé et les commandes de test. La CI exécute lint, format, mypy et les tests contre Home Assistant 2026.9.3 sans accès à une installation domestique.
-
-L'audit d'installation est un document local ignoré par Git ; il ne doit pas accompagner une distribution publique. Les tests utilisent exclusivement des entités factices.
-
+Voir [le guide de développement](docs/DEVELOPMENT.md). Les tests n'utilisent que des entités factices et ne contactent pas une installation Home Assistant domestique. L'audit local d'installation est ignoré par Git et ne fait pas partie de la distribution.

@@ -1,8 +1,8 @@
 """Single authority for heater transitions; no Home Assistant dependency or I/O."""
 
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
-import math
 
 from .settings import Settings
 
@@ -59,8 +59,15 @@ class CycleController:
         if self.observed is None or self.since is None:
             return Decision("reconciling")
         if self.pending is not None:
-            return Decision("actuator_starting" if self.pending else "actuator_stopping", deadline=self.pending_until)
-        valid = temperature is not None and math.isfinite(temperature) and math.isfinite(target)
+            return Decision(
+                "actuator_starting" if self.pending else "actuator_stopping",
+                deadline=self.pending_until,
+            )
+        valid = (
+            temperature is not None
+            and math.isfinite(temperature)
+            and math.isfinite(target)
+        )
         if not self.settings.min_temperature <= target <= self.settings.max_temperature:
             valid = False
         desired = self.observed
@@ -69,14 +76,25 @@ class CycleController:
         elif temperature is not None:
             if self.observed and temperature >= target + self.settings.hot_tolerance:
                 desired = False
-            elif not self.observed and temperature <= target - self.settings.cold_tolerance:
+            elif (
+                not self.observed
+                and temperature <= target - self.settings.cold_tolerance
+            ):
                 desired = True
-        protection = self.settings.min_on if self.observed else max(self.settings.min_off, self.settings.cooldown)
+        protection = (
+            self.settings.min_on
+            if self.observed
+            else max(self.settings.min_off, self.settings.cooldown)
+        )
         until = self.since + protection
         if desired != self.observed:
             if now < until:
-                return Decision("minimum_runtime" if self.observed else "cooldown", deadline=until)
-            return Decision("actuator_starting" if desired else "actuator_stopping", command=desired)
+                return Decision(
+                    "minimum_runtime" if self.observed else "cooldown", deadline=until
+                )
+            return Decision(
+                "actuator_starting" if desired else "actuator_stopping", command=desired
+            )
         return Decision("heating" if self.observed else "idle" if heat else "off")
 
     def start_command(self, on: bool) -> None:
@@ -85,4 +103,3 @@ class CycleController:
             raise RuntimeError("Command not permitted")
         self.pending = on
         self.pending_until = self.clock() + self.settings.command_timeout
-

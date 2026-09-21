@@ -14,7 +14,9 @@ async def async_get_config_entry_diagnostics(
     """Return structural information only; never copy entry data wholesale."""
     return {
         "schema_version": entry.version,
-        "observation_only": entry.options.get("settings", {}).get("observation_only", True),
+        "observation_only": entry.options.get("settings", {}).get(
+            "observation_only", True
+        ),
         "sources_resolved": {
             role: resolve(hass, ref) is not None
             for role, ref in configured_sources(entry).items()

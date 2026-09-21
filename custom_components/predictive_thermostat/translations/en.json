@@ -18,18 +18,33 @@
       "not_temperature": "Choose a temperature sensor.",
       "same_sensor": "Use different indoor and outdoor sensors.",
       "heater_in_use": "This heater is already assigned to another zone.",
-      "empty_name": "Enter a zone name."
+      "empty_name": "Enter a zone name.",
+      "invalid_setting": "Check the safety settings and temperature limits."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Change sources",
-        "description": "Observation only. Changes reload this integration without controlling the heater.",
+        "title": "Sources and safety settings",
+        "description": "Observation mode is enabled by default. Disabling it allows manual HEAT control after you have verified every hardware value and conflicting controller.",
         "data": {
           "indoor_sensor": "Indoor temperature sensor",
           "outdoor_sensor": "Outdoor temperature sensor",
-          "heater": "Heater switch (observation only)"
+          "heater": "Heater switch",
+          "observation_only": "Observation mode",
+          "inverted": "Inverted switch logic",
+          "min_on": "Minimum on time (seconds)",
+          "min_off": "Minimum off time (seconds)",
+          "cooldown": "Cooldown after stopping (seconds)",
+          "command_timeout": "Command confirmation timeout (seconds)",
+          "sensor_max_age": "Maximum indoor sensor age (seconds)",
+          "cold_tolerance": "Start hysteresis (°C)",
+          "hot_tolerance": "Stop hysteresis (°C)",
+          "min_temperature": "Minimum target temperature (°C)",
+          "max_temperature": "Maximum target temperature (°C)",
+          "target_step": "Target temperature step (°C)",
+          "initial_target": "Initial target temperature (°C)",
+          "reset_fault": "Acknowledge and reset a latched fault"
         }
       }
     },
@@ -38,7 +53,8 @@
       "not_temperature": "Choose a temperature sensor.",
       "same_sensor": "Use different indoor and outdoor sensors.",
       "heater_in_use": "This heater is already assigned to another zone.",
-      "empty_name": "Enter a zone name."
+      "empty_name": "Enter a zone name.",
+      "invalid_setting": "Check the safety settings and temperature limits."
     }
   }
 }

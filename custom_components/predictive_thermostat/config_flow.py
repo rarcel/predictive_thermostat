@@ -16,6 +16,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig
 
 from .const import CONF_HEATER, CONF_INDOOR, CONF_OUTDOOR, DOMAIN, SOURCE_KEYS
+from .settings import Settings
 from .sources import configured_sources, reference, resolve
 
 
@@ -30,6 +31,26 @@ def source_schema() -> dict[Any, Any]:
             )
         )
         for key in SOURCE_KEYS
+    }
+
+
+def settings_schema() -> dict[Any, Any]:
+    """All safety-relevant hardware values are explicit, bounded options."""
+    return {
+        vol.Required("observation_only"): bool,
+        vol.Required("inverted"): bool,
+        vol.Required("min_on"): vol.Coerce(float),
+        vol.Required("min_off"): vol.Coerce(float),
+        vol.Required("cooldown"): vol.Coerce(float),
+        vol.Required("command_timeout"): vol.Coerce(float),
+        vol.Required("sensor_max_age"): vol.Coerce(float),
+        vol.Required("cold_tolerance"): vol.Coerce(float),
+        vol.Required("hot_tolerance"): vol.Coerce(float),
+        vol.Required("min_temperature"): vol.Coerce(float),
+        vol.Required("max_temperature"): vol.Coerce(float),
+        vol.Required("target_step"): vol.Coerce(float),
+        vol.Required("initial_target"): vol.Coerce(float),
+        vol.Optional("reset_fault"): bool,
     }
 
 
@@ -105,7 +126,7 @@ class PredictiveThermostatConfigFlow(ConfigFlow, domain=DOMAIN):
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> SourceOptionsFlow:
-        """Offer source changes; observation cannot be disabled."""
+        """Offer source and safety changes through a clean reload."""
         return SourceOptionsFlow()
 
 
@@ -121,16 +142,34 @@ class SourceOptionsFlow(OptionsFlowWithReload):
             errors, sources = validate_sources(
                 self.hass, user_input, self.config_entry.entry_id
             )
+            settings_input = {
+                key: value
+                for key, value in user_input.items()
+                if key not in (*SOURCE_KEYS, "reset_fault")
+            }
+            try:
+                settings = Settings.from_dict(settings_input)
+            except ValueError:
+                errors["base"] = "invalid_setting"
             if not errors:
-                return self.async_create_entry(data=sources)
+                data = {**sources, "settings": settings.as_dict()}
+                if user_input.get("reset_fault"):
+                    data["reset_fault_token"] = str(uuid4())
+                return self.async_create_entry(data=data)
         defaults = {
             key: resolve(self.hass, source)
             for key, source in configured_sources(self.config_entry).items()
         }
+        existing = Settings.from_dict(
+            dict(self.config_entry.options.get("settings", {}))
+        ).as_dict()
+        existing.update(defaults)
+        existing["reset_fault"] = False
         return self.async_show_form(
             step_id="init",
             data_schema=self.add_suggested_values_to_schema(
-                vol.Schema(source_schema()), user_input or defaults
+                vol.Schema({**source_schema(), **settings_schema()}),
+                user_input or existing,
             ),
             errors=errors,
         )
