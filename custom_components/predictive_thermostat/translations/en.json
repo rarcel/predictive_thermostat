@@ -3,14 +3,14 @@
   "config": {
     "step": {
       "user": {
-        "title": "Create an observation zone",
-        "description": "This milestone displays measurements without controlling the heater. Your existing thermostat remains in charge. Scheduling and prediction are not available yet.",
+        "title": "Create a predictive thermostat",
+        "description": "Create one thermostat for this zone. It starts in observation mode: it reads the temperatures, schedule and predictions without sending commands to the heater. You can configure the schedule and safety settings afterwards.",
         "data": {
           "weather_entity": "Optional weather forecast entity",
           "name": "Zone name",
           "indoor_sensor": "Indoor temperature sensor",
           "outdoor_sensor": "Outdoor temperature sensor",
-          "heater": "Heater switch (observation only)"
+          "heater": "Heater control switch"
         }
       }
     },

@@ -3,14 +3,14 @@
   "config": {
     "step": {
       "user": {
-        "title": "Créer une zone d’observation",
-        "description": "Ce premier jalon affiche les mesures sans commander le chauffage. Le thermostat existant reste responsable du chauffage. Planning et prédiction ne sont pas encore disponibles.",
+        "title": "Créer un thermostat prédictif",
+        "description": "Créez un thermostat unique pour cette zone. Il démarre en mode observation : il lit les températures, le planning et les prédictions sans commander le chauffage. Le planning et les réglages de sécurité se configurent ensuite.",
         "data": {
           "weather_entity": "Entité facultative de prévisions météo",
           "name": "Nom de la zone",
           "indoor_sensor": "Sonde de température intérieure",
           "outdoor_sensor": "Sonde de température extérieure",
-          "heater": "Interrupteur du chauffage (observation uniquement)"
+          "heater": "Interrupteur de commande du chauffage"
         }
       }
     },
