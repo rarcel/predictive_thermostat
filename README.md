@@ -71,7 +71,7 @@ Les changements d'options rechargent proprement l'intégration. Vérifiez que l'
 ### Parcours recommandé
 
 1. Créez la zone avec les deux sondes et le switch, puis gardez **Mode observation** activé.
-2. Saisissez un planning simple sur tous les jours, par exemple `06:30=19; 22:30=17`. Les décimales `20.5` et `20,5` sont acceptées.
+2. Saisissez un planning simple sur tous les jours, par exemple `06:30=19; 22:30=17`. Utilisez de préférence le point pour les décimales : `07:15=20.5`. La virgule `20,5` reste acceptée.
 3. Vérifiez pendant quelques transitions les attributs `schedule_target_temperature`, `next_target_time`, `predicted_start_time`, `prediction_reason` et `fallback_reason`.
 4. Si une entité météo est disponible, sélectionnez-la dans les options ; elle est facultative et la sonde extérieure conserve le rôle de repli.
 5. Comparez les horaires prédits aux températures réelles. Les attributs `learning_samples` et `last_prediction_error_minutes` montrent uniquement les agrégats appris.
