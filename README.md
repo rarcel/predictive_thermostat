@@ -59,6 +59,8 @@ Pour préparer un essai contrôlé sur une instance de test, ouvrez **Configurer
 | Limites, pas et consigne initiale | Bornes de la consigne ; ces valeurs sont stockées en °C, indépendamment de l'unité d'affichage HA. |
 | Objectifs du lundi au dimanche | Planning local interne, une ou plusieurs entrées `HH:MM=°C` par jour. |
 | Délai d’allumage, vitesse, pertes, marge, préchauffage min./max. | Hypothèses explicables du fallback, en minutes et °C/minute. Elles bornent l’anticipation, sans remplacer les protections de cycle. |
+| Prévision météo facultative | Prévision horaire pour le prochain objectif. En cas d’échec, la sonde extérieure locale reste utilisée. |
+| Arrêt optimal | Désactivé par défaut. Il peut demander un arrêt avant une baisse planifiée, mais les durées minimales de marche et de cooldown restent prioritaires. |
 
 Les changements d'options rechargent proprement l'intégration. Vérifiez que l'actionneur n'est pas aussi piloté par une automatisation, un thermostat ou un autre composant : l'intégration ne les désactive pas et ne les modifie pas. Un même switch ne peut pas être associé à deux zones Predictive Thermostat.
 

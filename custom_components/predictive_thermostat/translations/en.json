@@ -6,6 +6,7 @@
         "title": "Create an observation zone",
         "description": "This milestone displays measurements without controlling the heater. Your existing thermostat remains in charge. Scheduling and prediction are not available yet.",
         "data": {
+          "weather_entity": "Optional weather forecast entity",
           "name": "Zone name",
           "indoor_sensor": "Indoor temperature sensor",
           "outdoor_sensor": "Outdoor temperature sensor",
@@ -50,6 +51,9 @@
           "preheat_margin": "Preheat safety margin (minutes)",
           "min_preheat": "Minimum preheat (minutes)",
           "max_preheat": "Maximum preheat (minutes)",
+          "optimal_stop_enabled": "Enable optimal stop",
+          "cooling_rate": "Estimated cooling rate (°C/minute)",
+          "max_stop_advance": "Maximum optimal-stop advance (minutes)",
           "monday": "Monday targets (HH:MM=°C)",
           "tuesday": "Tuesday targets (HH:MM=°C)",
           "wednesday": "Wednesday targets (HH:MM=°C)",

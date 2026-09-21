@@ -6,6 +6,7 @@
         "title": "Créer une zone d’observation",
         "description": "Ce premier jalon affiche les mesures sans commander le chauffage. Le thermostat existant reste responsable du chauffage. Planning et prédiction ne sont pas encore disponibles.",
         "data": {
+          "weather_entity": "Entité facultative de prévisions météo",
           "name": "Nom de la zone",
           "indoor_sensor": "Sonde de température intérieure",
           "outdoor_sensor": "Sonde de température extérieure",
@@ -50,6 +51,9 @@
           "preheat_margin": "Marge de sécurité de préchauffage (minutes)",
           "min_preheat": "Préchauffage minimal (minutes)",
           "max_preheat": "Préchauffage maximal (minutes)",
+          "optimal_stop_enabled": "Activer l’arrêt optimal",
+          "cooling_rate": "Vitesse estimée de refroidissement (°C/minute)",
+          "max_stop_advance": "Anticipation maximale d’arrêt optimal (minutes)",
           "monday": "Objectifs du lundi (HH:MM=°C)",
           "tuesday": "Objectifs du mardi (HH:MM=°C)",
           "wednesday": "Objectifs du mercredi (HH:MM=°C)",
