@@ -96,13 +96,14 @@ class WeekSchedule:
             if not isinstance(raw, str) or not raw.strip():
                 raise ValueError("schedule_empty")
             values: list[SchedulePoint] = []
-            for item in re.split(r"[,;\n]", raw):
+            # A comma before a time separates entries; otherwise it is a French decimal.
+            for item in re.split(r";|\n|,(?=\s*[0-2][0-9]:)", raw):
                 match = _POINT.fullmatch(item.strip())
                 if match is None:
                     raise ValueError("schedule_format")
                 try:
                     at = time.fromisoformat(match["time"])
-                    temperature = float(match["temp"])
+                    temperature = float(match["temp"].replace(",", "."))
                 except ValueError as err:
                     raise ValueError("schedule_format") from err
                 if at.hour > 23 or not math.isfinite(temperature):

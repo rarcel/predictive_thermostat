@@ -28,6 +28,13 @@ def test_empty_duplicate_and_invalid_schedules_are_rejected():
     fields["monday"] = ""
     with pytest.raises(ValueError):
         WeekSchedule.from_fields(fields)
+
+
+def test_french_decimal_and_comma_separated_entries():
+    fields = {day: "00:00=18" for day in DAYS}
+    fields["monday"] = "07:15=20,5, 18:00=19"
+    schedule = WeekSchedule.from_fields(fields)
+    assert schedule.points["monday"][0].temperature == 20.5
     fields["monday"] = "07:00=18,07:00=20"
     with pytest.raises(ValueError):
         WeekSchedule.from_fields(fields)
