@@ -64,6 +64,16 @@ Pour préparer un essai contrôlé sur une instance de test, ouvrez **Configurer
 
 Les changements d'options rechargent proprement l'intégration. Vérifiez que l'actionneur n'est pas aussi piloté par une automatisation, un thermostat ou un autre composant : l'intégration ne les désactive pas et ne les modifie pas. Un même switch ne peut pas être associé à deux zones Predictive Thermostat.
 
+### Parcours recommandé
+
+1. Créez la zone avec les deux sondes et le switch, puis gardez **Mode observation** activé.
+2. Saisissez un planning simple sur tous les jours, par exemple `06:30=19, 22:30=17`.
+3. Vérifiez pendant quelques transitions les attributs `schedule_target_temperature`, `next_target_time`, `predicted_start_time`, `prediction_reason` et `fallback_reason`.
+4. Si une entité météo est disponible, sélectionnez-la dans les options ; elle est facultative et la sonde extérieure conserve le rôle de repli.
+5. Comparez les horaires prédits aux températures réelles. Les attributs `learning_samples` et `last_prediction_error_minutes` montrent uniquement les agrégats appris.
+
+`control_state` décrit la décision interne (`idle`, `heating`, `cooldown`, `minimum_runtime`, `fault` ou `observation`). `pending_command` signale un ordre en attente de confirmation. `fault_reason` impose de corriger le problème puis de l’acquitter explicitement dans les options ; l’intégration ne relance pas rapidement le switch.
+
 En cas de défaut verrouillé, corrigez d'abord sa cause puis cochez **Acquitter et réinitialiser un défaut verrouillé** dans les options. Cette action recharge l'intégration ; elle ne force pas de commande immédiate. Les attributs `control_state`, `fault_reason`, `pending_command`, `heater_available` et `fallback_reason` permettent d'examiner la situation sans exposer les références privées des sources dans les diagnostics.
 
 ## Limites de cette étape
@@ -87,3 +97,5 @@ Les diagnostics expurgent les noms et identifiants de sources, les mesures et le
 ## Développement
 
 Voir [le guide de développement](docs/DEVELOPMENT.md). Les tests n'utilisent que des entités factices et ne contactent pas une installation Home Assistant domestique. L'audit local d'installation est ignoré par Git et ne fait pas partie de la distribution.
+
+Avant toute installation, suivre la [checklist d’instance de test](docs/V1_TEST_INSTANCE.md). Elle permet de vérifier le planning, le fallback météo, les protections de cycle et le mode observation sans poêle réel.
