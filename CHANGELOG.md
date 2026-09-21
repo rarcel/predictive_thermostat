@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1
+
+- Classifie l’intégration comme service afin qu’elle apparaisse dans la liste des intégrations, plutôt que seulement parmi les entrées de helper.
+
 ## 0.5.0
 
 - Entité climate unique avec OFF, HEAT et AUTO, planning hebdomadaire et dérogation.
