@@ -1,12 +1,12 @@
 # Predictive Thermostat
 
-`predictive_thermostat` est une custom integration Home Assistant locale et paramétrable, conçue d'abord pour des chauffages à forte inertie tels qu'un poêle à granulés. Elle expose **une seule entité `climate` principale par zone**. Son planning interne futur signifiera toujours « température à atteindre à cette heure » ; la température extérieure servira à une prédiction explicable, locale et légère.
+`predictive_thermostat` est une custom integration Home Assistant locale et paramétrable, conçue d'abord pour des chauffages à forte inertie tels qu'un poêle à granulés. Elle expose **une seule entité `climate` principale par zone**. Son planning interne signifie « température à atteindre à cette heure » ; la température extérieure alimente une prédiction explicable, locale et légère.
 
-## Version actuelle : 0.5.0 — apprentissage initial local
+## Version actuelle : 0.5.1 — thermostat prédictif avec commande protégée
 
-Cette étape apporte `OFF`, `HEAT` manuel et `AUTO`, une consigne, un planning interne hebdomadaire, un adaptateur `switch`, un contrôleur de cycle centralisé, une anticipation fallback et un apprentissage initial local. Il ajuste lentement la vitesse de chauffe et la marge d’arrivée à partir de cycles valides. Le modèle ne peut jamais augmenter la consigne au-delà de la prochaine cible planifiée, ni contourner les protections matérielles.
+L’intégration propose `OFF`, `HEAT` manuel et `AUTO`, une consigne, un planning hebdomadaire, un adaptateur `switch`, un contrôleur de cycle centralisé, une anticipation fallback, un apprentissage local, une météo facultative et un arrêt optimal facultatif. Elle peut commander le switch de chauffage lorsque le mode observation est explicitement désactivé. Le modèle ne peut jamais augmenter la consigne au-delà de la prochaine cible planifiée, ni contourner les protections matérielles.
 
-L'intégration est créée en **mode observation**. Dans ce mode, elle calcule la décision qui serait prise mais n'appelle jamais le switch. Pour autoriser le mode HEAT réel, il faut désactiver explicitement cette option après avoir vérifié le câblage, la polarité, les délais constructeur et l'absence de contrôleur concurrent. Cette documentation ne déploie ni ne modifie aucune installation Home Assistant.
+L'intégration est créée en **mode observation**. Dans ce mode, elle calcule la décision qui serait prise mais n'appelle jamais le switch. Pour autoriser le contrôle réel en `HEAT` ou `AUTO`, désactivez explicitement cette option après avoir vérifié le câblage, la polarité, les délais constructeur et l'absence de contrôleur concurrent.
 
 Le contrôleur applique, dans cet ordre :
 
@@ -80,12 +80,12 @@ Les changements d'options rechargent proprement l'intégration. Vérifiez que l'
 
 En cas de défaut verrouillé, corrigez d'abord sa cause puis cochez **Acquitter et réinitialiser un défaut verrouillé** dans les options. Cette action recharge l'intégration ; elle ne force pas de commande immédiate. Les attributs `control_state`, `fault_reason`, `pending_command`, `heater_available` et `fallback_reason` permettent d'examiner la situation sans exposer les références privées des sources dans les diagnostics.
 
-## Limites de cette étape
+## Limites connues
 
-- Pas d'apprentissage, de correction adaptative, de prévision météo ou d'arrêt optimal. La confiance fallback fixe n'est pas une mesure de précision réelle ; elle indique seulement qu'aucune donnée apprise n'est disponible.
-- La température extérieure est déjà configurée et affichée, mais n'influence pas encore la décision. Elle sera une entrée de l'estimateur thermique local et explicable à l'étape suivante.
-- L'adaptateur V0.2 accepte un `switch` uniquement. Les scripts et entités climate comme actionneurs sont hors périmètre.
-- L'intégration ne remplace pas les sécurités internes, thermostats de sûreté ou notices du poêle.
+- L’actionneur V1 est un `switch` uniquement ; les scripts et entités climate comme actionneurs ne sont pas encore pris en charge.
+- La prévision météo est facultative et se replie sur la sonde extérieure locale. Aucune météo distante n’est imposée.
+- La confiance du modèle est un indicateur interne, pas une garantie de précision thermique.
+- L’intégration ne remplace jamais les sécurités internes, thermostats de sûreté ou consignes du fabricant.
 
 ## Mise à jour, suppression et dépannage
 
