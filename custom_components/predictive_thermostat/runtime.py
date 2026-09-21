@@ -373,10 +373,11 @@ class ControlRuntime:
         started, indoor, outdoor, target = self._cycle_started
         self._cycle_started = None
         if self.indoor is not None and self.indoor >= target:
-            self.learning = self.learning.update(
-                HeatingCycle(
-                    indoor, outdoor, target, (self.core.clock() - started) / 60
-                )
+            cycle = HeatingCycle(
+                indoor, outdoor, target, (self.core.clock() - started) / 60
+            )
+            self.learning = self.learning.update(cycle).update_losses(
+                cycle, self.settings
             )
             self.model = FallbackModel(self.settings, self.learning)
 

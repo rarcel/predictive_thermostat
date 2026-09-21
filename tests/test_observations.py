@@ -13,6 +13,8 @@ def test_cycle_validation_and_bounded_learning():
     assert updated.samples == 1
     assert updated.heating_rate == 0.19
     assert LearningState.from_dict(updated.as_dict(), Settings()) == updated
+    losses = updated.update_losses(HeatingCycle(17, 5, 20, 80), Settings())
+    assert losses.loss_factor > updated.loss_factor
 
 
 def test_arrival_error_is_slow_and_bounded():
