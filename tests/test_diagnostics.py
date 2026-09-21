@@ -12,6 +12,8 @@ async def test_diagnostics_whitelist(hass, entry):
     assert result == {
         "schema_version": 1,
         "observation_only": True,
+        "forecast_configured": False,
+        "optimal_stop_enabled": False,
         "sources_resolved": {
             "indoor_sensor": True,
             "outdoor_sensor": True,

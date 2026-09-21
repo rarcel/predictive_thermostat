@@ -17,6 +17,10 @@ async def async_get_config_entry_diagnostics(
         "observation_only": entry.options.get("settings", {}).get(
             "observation_only", True
         ),
+        "forecast_configured": "weather_entity" in entry.options,
+        "optimal_stop_enabled": entry.options.get("settings", {}).get(
+            "optimal_stop_enabled", False
+        ),
         "sources_resolved": {
             role: resolve(hass, ref) is not None
             for role, ref in configured_sources(entry).items()
