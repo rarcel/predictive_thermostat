@@ -131,6 +131,17 @@ async def test_unload_never_commands_the_switch(hass, entry):
     assert not calls
 
 
+async def test_registry_resubscribe_survives_a_consumed_listener(hass, entry):
+    """A registry update must not make the climate entity fail to reload."""
+    _, thermostat = await _entity(hass, entry)
+    consumed = thermostat.runtime._source_listeners[0]
+    consumed()
+
+    thermostat.runtime._subscribe()
+
+    assert len(thermostat.runtime._source_listeners) == 2
+
+
 async def test_auto_uses_schedule_then_manual_override(hass, entry):
     schedule = WeekSchedule.default(17)
     hass.config_entries.async_update_entry(

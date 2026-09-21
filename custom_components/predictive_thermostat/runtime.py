@@ -178,6 +178,12 @@ class ControlRuntime:
 
     async def start(self) -> None:
         """Load the safety record before any control decision."""
+        # Home Assistant may call the platform setup again while a registry
+        # change is being processed.  Keep the existing listeners in that
+        # case: registering them twice makes their unsubscribe callbacks
+        # invalid and can prevent the climate entity from being added.
+        if self._running:
+            return
         try:
             saved = await self.store.async_load()
             if saved is not None:
@@ -305,8 +311,17 @@ class ControlRuntime:
 
     @callback
     def _subscribe(self) -> None:
-        for remove in self._source_listeners:
-            remove()
+        # Clear the list before invoking callbacks. A callback can already
+        # have been consumed by Home Assistant during an entry reload; it is
+        # then harmless, but must not stop rebuilding the subscriptions.
+        listeners, self._source_listeners = self._source_listeners, []
+        for remove in listeners:
+            try:
+                remove()
+            except ValueError:
+                # Home Assistant listener removal is not idempotent. This
+                # happens after a registry-driven reload, not a control error.
+                pass
         ids = [
             value for ref in self.sources.values() if (value := resolve(self.hass, ref))
         ]
@@ -471,8 +486,16 @@ class ControlRuntime:
     async def stop(self) -> None:
         """Cancel callbacks/tasks, save uncertainty, never command during unload."""
         self._running = False
-        for remove in self._listeners + self._source_listeners:
-            remove()
+        listeners = self._listeners + self._source_listeners
+        self._listeners = []
+        self._source_listeners = []
+        for remove in listeners:
+            try:
+                remove()
+            except ValueError:
+                # A one-shot or registry listener may already be removed by
+                # Home Assistant while an entry reload is in progress.
+                pass
         if self._timer:
             self._timer()
             self._timer = None
