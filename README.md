@@ -40,6 +40,10 @@ Effectuez ces opérations sur l'instance Home Assistant de votre choix, de préf
 
 Sur Home Assistant OS et Home Assistant Container, le répertoire de configuration est en général `/config`. N'ajoutez aucun bloc YAML `predictive_thermostat:` et ne remplacez jamais `generic_thermostat` du Core.
 
+## Installation HACS
+
+Après publication du dépôt Git, ajouter le dépôt dans **HACS → Intégrations → Menu → Dépôts personnalisés**, avec la catégorie **Integration**, puis installer **Predictive Thermostat**. Redémarrer Home Assistant et suivre ensuite le Config Flow décrit ci-dessus. La publication HACS ne déploie ni ne configure automatiquement une zone ; le mode observation reste activé à la création.
+
 ## Utilisation sûre
 
 L'entité climate démarre en `OFF`, avec le mode observation actif. Une consigne et les modes `OFF`/`HEAT`/`AUTO` sont proposés pour permettre l'observation de la décision de cycle. Aucune action sur l'entité ne commande alors le switch.
