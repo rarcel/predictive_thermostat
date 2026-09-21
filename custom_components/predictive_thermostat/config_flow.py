@@ -51,6 +51,12 @@ def settings_schema() -> dict[Any, Any]:
         vol.Required("max_temperature"): vol.Coerce(float),
         vol.Required("target_step"): vol.Coerce(float),
         vol.Required("initial_target"): vol.Coerce(float),
+        vol.Required("ignition_delay"): vol.Coerce(float),
+        vol.Required("heating_rate"): vol.Coerce(float),
+        vol.Required("loss_factor"): vol.Coerce(float),
+        vol.Required("preheat_margin"): vol.Coerce(float),
+        vol.Required("min_preheat"): vol.Coerce(float),
+        vol.Required("max_preheat"): vol.Coerce(float),
         vol.Optional("reset_fault"): bool,
     }
 

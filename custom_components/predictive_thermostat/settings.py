@@ -22,6 +22,12 @@ class Settings:
     max_temperature: float = 30
     target_step: float = 0.5
     initial_target: float = 20
+    ignition_delay: float = 10
+    heating_rate: float = 0.15
+    loss_factor: float = 0.05
+    preheat_margin: float = 5
+    min_preheat: float = 5
+    max_preheat: float = 180
 
     def __post_init__(self) -> None:
         for item in fields(self):
@@ -41,12 +47,20 @@ class Settings:
             "cooldown",
             "command_timeout",
             "sensor_max_age",
+            "ignition_delay",
+            "preheat_margin",
+            "min_preheat",
+            "max_preheat",
         ):
             if not 1 <= getattr(self, key) <= 86400:
                 raise ValueError(key)
         for key in ("cold_tolerance", "hot_tolerance", "target_step"):
             if not 0 < getattr(self, key) <= 10:
                 raise ValueError(key)
+        if not 0 < self.heating_rate <= 10 or not 0 <= self.loss_factor <= 10:
+            raise ValueError("heating_model")
+        if self.min_preheat > self.max_preheat:
+            raise ValueError("preheat_range")
         if not -50 <= self.min_temperature < self.max_temperature <= 100:
             raise ValueError("temperature_range")
         if not self.min_temperature <= self.initial_target <= self.max_temperature:

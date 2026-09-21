@@ -5,7 +5,7 @@ import logging
 import math
 from collections.abc import Callable
 from contextlib import suppress
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -22,9 +22,10 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_HEATER, CONF_INDOOR
+from .const import CONF_HEATER, CONF_INDOOR, CONF_OUTDOOR
 from .cycle_controller import CycleController, Decision
 from .heater_adapter import SwitchAdapter
+from .model import FallbackModel, Prediction
 from .schedule import ScheduleResolution, WeekSchedule
 from .settings import Settings
 from .sources import configured_sources, resolve, temperature
@@ -48,12 +49,17 @@ class ControlRuntime:
         )
         self.store = ControlStore(hass, entry.entry_id)
         self.schedule = self._schedule_from_options()
+        self.model = FallbackModel(self.settings)
         self.mode = "off"
         self.heat = False
         self.manual_target = self.settings.initial_target
         self.target = self.manual_target
         self.override: tuple[float, datetime] | None = None
         self.schedule_resolution: ScheduleResolution | None = None
+        self.outdoor: float | None = None
+        self.prediction: Prediction | None = None
+        self.predicted_start: datetime | None = None
+        self.preheating = False
         self.decision = Decision("reconciling")
         self.indoor: float | None = None
         self.expires: float | None = None
@@ -80,23 +86,43 @@ class ControlRuntime:
     def _local_now(self) -> datetime:
         return dt_util.now(dt_util.get_time_zone(self.hass.config.time_zone))
 
-    def _apply_mode(self) -> float | None:
-        """Resolve AUTO once per decision and return its next deadline delay."""
+    def _apply_mode(self) -> list[float]:
+        """Resolve AUTO and return local schedule/prediction deadline delays."""
         now = self._local_now()
         self.schedule_resolution = self.schedule.resolve(now)
+        deadlines = [(self.schedule_resolution.next_at - now).total_seconds()]
+        self.prediction = None
+        self.predicted_start = None
+        self.preheating = False
         if self.override is not None and now >= self.override[1]:
             self.override = None
         if self.mode == "auto":
             self.heat = True
-            self.target = (
-                self.override[0]
-                if self.override is not None
-                else self.schedule_resolution.current.temperature
-            )
+            self.target = self.schedule_resolution.current.temperature
+            if self.override is not None:
+                self.target = self.override[0]
+            elif (
+                self.schedule_resolution.next.temperature
+                > self.schedule_resolution.current.temperature
+            ):
+                self.prediction = self.model.predict(
+                    self.indoor,
+                    self.outdoor,
+                    self.schedule_resolution.next.temperature,
+                )
+                if self.prediction is not None:
+                    self.predicted_start = self.schedule_resolution.next_at - timedelta(
+                        minutes=self.prediction.minutes
+                    )
+                    if now >= self.predicted_start:
+                        self.target = self.schedule_resolution.next.temperature
+                        self.preheating = now < self.schedule_resolution.next_at
+                    else:
+                        deadlines.append((self.predicted_start - now).total_seconds())
         else:
             self.heat = self.mode == "heat"
             self.target = self.manual_target
-        return max(0.0, (self.schedule_resolution.next_at - now).total_seconds())
+        return [delay for delay in deadlines if delay > 0]
 
     def set_mode(self, mode: str) -> None:
         """Set a user mode; AUTO starts from the current schedule target."""
@@ -285,6 +311,11 @@ class ControlRuntime:
         entity_id = resolve(self.hass, self.sources[CONF_INDOOR])
         state = self.hass.states.get(entity_id) if entity_id else None
         self.indoor = temperature(self.hass, entity_id, UnitOfTemperature.CELSIUS)
+        self.outdoor = temperature(
+            self.hass,
+            resolve(self.hass, self.sources[CONF_OUTDOOR]),
+            UnitOfTemperature.CELSIUS,
+        )
         if state is None or state.attributes.get("restored"):
             self.indoor = None
             self.expires = None
@@ -312,7 +343,7 @@ class ControlRuntime:
             self._timer()
             self._timer = None
         self._read()
-        schedule_delay = self._apply_mode()
+        schedule_delays = self._apply_mode()
         self.decision = self.core.decide(self.heat, self.target, self.indoor)
         command = self.decision.command
         if command is not None and not self.settings.observation_only:
@@ -349,8 +380,7 @@ class ControlRuntime:
             for d in (self.decision.deadline, self.expires)
             if d is not None and d > now
         ]
-        if schedule_delay is not None and schedule_delay > 0:
-            deadlines.append(now + schedule_delay)
+        deadlines.extend(now + delay for delay in schedule_delays)
         if deadlines and self._running:
             self._timer = async_call_later(self.hass, min(deadlines) - now, self._wake)
         if self._running:

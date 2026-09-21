@@ -1,4 +1,4 @@
-# Développement du jalon 0.3.0
+# Développement du jalon 0.4.0
 
 ## Environnement isolé
 
@@ -23,6 +23,7 @@ Avec uv déjà installé : `uv venv --python 3.14.7 .venv`, puis `uv pip install
 - `sources.py` : références stables de registre, résolution après renommage et conversion des températures.
 - `settings.py` : paramètres matériels validés et sérialisables.
 - `schedule.py` : planning hebdomadaire local pur, normalisé et testé aux changements DST.
+- `model.py` : estimateur fallback pur, local, borné et sans apprentissage.
 - `cycle_controller.py` : machine à états pure avec horloge injectée ; elle impose hystérésis, durées minimales, cooldown, confirmation et défaut verrouillé.
 - `heater_adapter.py` : seule passerelle vers un `switch`, avec validation d'état et de service.
 - `runtime.py` : sérialise les événements HA, le stockage, le timer et les décisions ; il ne commande jamais au déchargement.

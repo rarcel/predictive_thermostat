@@ -17,9 +17,8 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.unit_conversion import TemperatureConverter
 
-from .const import CONF_OUTDOOR, DOMAIN
+from .const import DOMAIN
 from .runtime import ControlRuntime
-from .sources import resolve, temperature
 
 
 async def async_setup_entry(
@@ -88,16 +87,16 @@ class PredictiveThermostat(ClimateEntity):
             if runtime.settings.observation_only
             else None
             if core.observed is None
+            else HVACAction.PREHEATING
+            if runtime.preheating and core.observed
             else HVACAction.HEATING
             if core.observed
             else HVACAction.IDLE
             if runtime.heat
             else HVACAction.OFF
         )
-        outdoor = temperature(
-            self.hass,
-            resolve(self.hass, runtime.sources[CONF_OUTDOOR]),
-            self.temperature_unit,
+        outdoor = (
+            self._display(runtime.outdoor) if runtime.outdoor is not None else None
         )
         self._attr_extra_state_attributes = {
             "control_state": "observation"
@@ -137,6 +136,15 @@ class PredictiveThermostat(ClimateEntity):
             "override_until": runtime.override[1].isoformat()
             if runtime.override is not None
             else None,
+            "predicted_start_time": runtime.predicted_start.isoformat()
+            if runtime.predicted_start is not None
+            else None,
+            "predicted_heating_minutes": runtime.prediction.minutes
+            if runtime.prediction is not None
+            else None,
+            "prediction_confidence": runtime.prediction.confidence
+            if runtime.prediction is not None
+            else 0.0,
         }
         self.async_write_ha_state()
 

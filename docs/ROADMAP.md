@@ -43,13 +43,15 @@ Ce jalon doit être fiable avant tout apprentissage.
 
 Implémenté dans le dépôt : planning hebdomadaire local validé dans l'Options Flow, cible courante et suivante, mode `AUTO`, dérogation manuelle persistée jusqu'au prochain point et règles DST déterministes. AUTO applique seulement la cible active ; l'anticipation reste l'étape prédictive suivante. Les protections du contrôleur et le mode observation ont toujours priorité.
 
-## Étape 4 — Prédiction fallback
+## Étape 4 — Prédiction fallback (0.4.0)
 
 - prise en compte de la température extérieure ;
 - estimateur conservateur sans apprentissage ;
 - planification exacte du début ;
 - attributs de diagnostic ;
 - mode observation.
+
+Implémenté dans le dépôt : estimateur local, léger, explicable et borné par les options ; la température extérieure intervient dans les pertes. Seules les hausses vers le prochain objectif peuvent être avancées. Sans sonde extérieure valide, aucune anticipation n'est faite. Le contrôleur de cycle reste l'autorité finale et le mode observation empêche toute commande réelle.
 
 ## Étape 5 — Collecte et apprentissage
 

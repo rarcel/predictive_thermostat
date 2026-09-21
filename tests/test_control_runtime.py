@@ -1,5 +1,8 @@
 """End-to-end simulated switch control, entirely inside the HA test harness."""
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from homeassistant.helpers import entity_component
 from homeassistant.helpers import entity_registry as er
 
@@ -150,3 +153,29 @@ async def test_auto_uses_schedule_then_manual_override(hass, entry):
     state = hass.states.get(entity_id)
     assert state.attributes["temperature"] == 22
     assert state.attributes["override_until"] is not None
+
+
+async def test_auto_starts_only_inside_bounded_preheat_window(hass, entry):
+    fields = WeekSchedule.default(17).fields()
+    fields["monday"] = "00:00=17, 11:00=22"
+    schedule = WeekSchedule.from_fields(fields)
+    hass.config_entries.async_update_entry(
+        entry,
+        options={"settings": Settings().as_dict(), "schedule": schedule.as_dict()},
+    )
+    entity_id, thermostat = await _entity(hass, entry)
+    now = datetime(2026, 9, 21, 10, 0, tzinfo=ZoneInfo("Europe/Paris"))
+    thermostat.runtime._local_now = lambda: now
+    await hass.services.async_call(
+        "climate", "set_hvac_mode", {"entity_id": entity_id, "hvac_mode": "auto"}, True
+    )
+    await hass.async_block_till_done()
+    state = hass.states.get(entity_id)
+    assert state.attributes["temperature"] == 17
+    assert state.attributes["predicted_start_time"] is not None
+    now = now.replace(hour=10, minute=45)
+    hass.states.async_set("sensor.inside", "20", {"unit_of_measurement": "°C"})
+    await hass.async_block_till_done()
+    state = hass.states.get(entity_id)
+    assert state.attributes["temperature"] == 22
+    assert state.attributes["predicted_heating_minutes"] is not None
