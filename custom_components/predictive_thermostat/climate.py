@@ -82,7 +82,10 @@ class PredictiveThermostat(ClimateEntity):
             self._display(runtime.indoor) if runtime.indoor is not None else None
         )
         self._attr_target_temperature = self._display(runtime.target)
-        self._attr_available = runtime.indoor is not None
+        # A stale sensor pauses the controller but must not hide the sole
+        # user-facing climate entity. The detailed cause is exposed below and
+        # announced as a persistent notification by the runtime.
+        self._attr_available = True
         self._attr_hvac_mode = HVACMode(runtime.mode)
         self._attr_hvac_action = (
             HVACAction.OFF

@@ -1,5 +1,7 @@
 """Exercise state changes and command rejection on the real HA platform."""
 
+from unittest.mock import patch
+
 import pytest
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
 from homeassistant.helpers import entity_registry as er
@@ -41,11 +43,26 @@ async def test_observation(hass, entry, no_services):
 )
 async def test_invalid_inside_recovers(hass, entry, value, unit, no_services):
     entity_id = await loaded(hass, entry)
-    hass.states.async_set("sensor.inside", value, {"unit_of_measurement": unit})
-    await hass.async_block_till_done()
-    assert hass.states.get(entity_id).state == "unavailable"
-    hass.states.async_set("sensor.inside", "68", {"unit_of_measurement": "°F"})
-    await hass.async_block_till_done()
+    with patch(
+        "custom_components.predictive_thermostat.runtime."
+        "persistent_notification.async_create"
+    ) as create:
+        hass.states.async_set("sensor.inside", value, {"unit_of_measurement": unit})
+        await hass.async_block_till_done()
+    state = hass.states.get(entity_id)
+    assert state.state == "off"
+    assert state.attributes["current_temperature"] is None
+    assert state.attributes["fallback_reason"] == "indoor_unavailable"
+    create.assert_called_once()
+    with patch(
+        "custom_components.predictive_thermostat.runtime."
+        "persistent_notification.async_dismiss"
+    ) as dismiss:
+        hass.states.async_set(
+            "sensor.inside", "68", {"unit_of_measurement": "°F"}
+        )
+        await hass.async_block_till_done()
+    dismiss.assert_called_once()
     assert hass.states.get(entity_id).state == "off"
     assert hass.states.get(entity_id).attributes["current_temperature"] == 20
 
@@ -79,7 +96,11 @@ async def test_source_rename_and_removal(hass, entry, no_services):
     registry.async_remove("sensor.renamed")
     hass.states.async_set("sensor.inside", "99", {"unit_of_measurement": "°C"})
     await hass.async_block_till_done()
-    assert hass.states.get(entity_id).state == "unavailable"
+    assert hass.states.get(entity_id).state == "off"
+    assert (
+        hass.states.get(entity_id).attributes["fallback_reason"]
+        == "indoor_unavailable"
+    )
 
 
 async def test_missing_outdoor_and_heater(hass, entry, no_services):

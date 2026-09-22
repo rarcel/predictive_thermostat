@@ -8,6 +8,7 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 from typing import Any
 
+from homeassistant.components import persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     EVENT_HOMEASSISTANT_STARTED,
@@ -22,7 +23,7 @@ from homeassistant.helpers.event import (
 )
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_HEATER, CONF_INDOOR, CONF_OUTDOOR, CONF_WEATHER
+from .const import CONF_HEATER, CONF_INDOOR, CONF_OUTDOOR, CONF_WEATHER, DOMAIN
 from .cycle_controller import CycleController, Decision
 from .heater_adapter import SwitchAdapter
 from .model import FallbackModel, LearningState, Prediction
@@ -80,6 +81,45 @@ class ControlRuntime:
         self._logged_fault: str | None = None
         self._cycle_started: tuple[float, float, float, float] | None = None
         self._arrival_recorded_for: datetime | None = None
+        self._indoor_alert_active = False
+
+    @property
+    def _indoor_notification_id(self) -> str:
+        """Return the stable ID for this zone's source-data alert."""
+        return f"{DOMAIN}_{self.entry.entry_id}_indoor_sensor"
+
+    def _update_indoor_sensor_notification(self) -> None:
+        """Expose an actionable, deduplicated alert for missing indoor data."""
+        if self.indoor is not None:
+            if self._indoor_alert_active:
+                persistent_notification.async_dismiss(
+                    self.hass, self._indoor_notification_id
+                )
+                self._indoor_alert_active = False
+            return
+        if self._indoor_alert_active:
+            return
+        if self.hass.config.language.startswith("fr"):
+            title = "Thermostat prédictif suspendu"
+            message = (
+                f"La sonde intérieure de la zone « {self.entry.title} » est "
+                "indisponible ou périmée. Les nouvelles demandes de chauffe sont "
+                "suspendues jusqu'à la prochaine mesure valide."
+            )
+        else:
+            title = "Predictive Thermostat paused"
+            message = (
+                f"The indoor sensor for zone '{self.entry.title}' is unavailable "
+                "or stale. New heating requests are paused until a valid reading "
+                "is received."
+            )
+        persistent_notification.async_create(
+            self.hass,
+            message,
+            title=title,
+            notification_id=self._indoor_notification_id,
+        )
+        self._indoor_alert_active = True
 
     def _schedule_from_options(self) -> WeekSchedule:
         value = self.entry.options.get("schedule")
@@ -376,6 +416,7 @@ class ControlRuntime:
             self.indoor = None
             self.expires = None
             self._report = None
+            self._update_indoor_sensor_notification()
             return
         report = (entity_id, state.last_reported)
         if report != self._report:
@@ -386,6 +427,7 @@ class ControlRuntime:
             )
         if self.expires is not None and self.core.clock() >= self.expires:
             self.indoor = None
+        self._update_indoor_sensor_notification()
         self._learn_cycle()
 
     def _learn_cycle(self) -> None:
