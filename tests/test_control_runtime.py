@@ -1,6 +1,7 @@
 """End-to-end simulated switch control, entirely inside the HA test harness."""
 
 from datetime import datetime
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from homeassistant.helpers import entity_component
@@ -111,8 +112,13 @@ async def test_actuator_unavailable_latches_fault_without_service(hass, entry):
     assert hass.states.get(entity_id).attributes["control_state"] == "reconciling"
     assert thermostat.runtime._actuator_unavailable_since is not None
     thermostat.runtime._actuator_unavailable_since -= 2
-    thermostat.runtime.request()
-    await hass.async_block_till_done()
+    with patch(
+        "custom_components.predictive_thermostat.runtime."
+        "persistent_notification.async_create"
+    ) as create:
+        thermostat.runtime.request()
+        await hass.async_block_till_done()
+    create.assert_called_once()
     await hass.services.async_call(
         "climate",
         "set_hvac_mode",

@@ -82,6 +82,7 @@ class ControlRuntime:
         self._cycle_started: tuple[float, float, float, float] | None = None
         self._arrival_recorded_for: datetime | None = None
         self._indoor_alert_active = False
+        self._fault_alert_active = False
         self.heater_available = False
         self._actuator_unavailable_since: float | None = None
 
@@ -89,6 +90,11 @@ class ControlRuntime:
     def _indoor_notification_id(self) -> str:
         """Return the stable ID for this zone's source-data alert."""
         return f"{DOMAIN}_{self.entry.entry_id}_indoor_sensor"
+
+    @property
+    def _fault_notification_id(self) -> str:
+        """Return the stable ID for this zone's safety-fault alert."""
+        return f"{DOMAIN}_{self.entry.entry_id}_fault"
 
     def _update_indoor_sensor_notification(self) -> None:
         """Expose an actionable, deduplicated alert for missing indoor data."""
@@ -122,6 +128,39 @@ class ControlRuntime:
             notification_id=self._indoor_notification_id,
         )
         self._indoor_alert_active = True
+
+    def _update_fault_notification(self) -> None:
+        """Expose a latched control fault in Home Assistant's notification center."""
+        fault = self.core.fault
+        if fault is None:
+            if self._fault_alert_active:
+                persistent_notification.async_dismiss(
+                    self.hass, self._fault_notification_id
+                )
+                self._fault_alert_active = False
+            return
+        if self._fault_alert_active:
+            return
+        if self.hass.config.language.startswith("fr"):
+            title = "Thermostat prédictif en sécurité"
+            message = (
+                f"La zone « {self.entry.title} » est verrouillée après le défaut "
+                f"« {fault} ». Vérifiez l'actionneur puis acquittez le défaut dans "
+                "les options de l'intégration."
+            )
+        else:
+            title = "Predictive Thermostat safety lock"
+            message = (
+                f"Zone '{self.entry.title}' is locked after '{fault}'. Check the "
+                "actuator, then acknowledge the fault in the integration options."
+            )
+        persistent_notification.async_create(
+            self.hass,
+            message,
+            title=title,
+            notification_id=self._fault_notification_id,
+        )
+        self._fault_alert_active = True
 
     def _schedule_from_options(self) -> WeekSchedule:
         value = self.entry.options.get("schedule")
@@ -520,6 +559,7 @@ class ControlRuntime:
         self.decision = self._decide()
         await self._save()
         self.decision = self._decide()
+        self._update_fault_notification()
         if self.core.fault and self.core.fault != self._logged_fault:
             _LOGGER.error(
                 "Heater control stopped: %s; explicit fault reset required",
