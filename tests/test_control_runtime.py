@@ -90,7 +90,12 @@ async def test_observation_never_calls_registered_switch_service(hass, entry):
 
 async def test_actuator_unavailable_latches_fault_without_service(hass, entry):
     hass.config_entries.async_update_entry(
-        entry, options={"settings": Settings(observation_only=False).as_dict()}
+        entry,
+        options={
+            "settings": Settings(
+                observation_only=False, command_timeout=1
+            ).as_dict()
+        },
     )
     calls = []
 
@@ -100,6 +105,13 @@ async def test_actuator_unavailable_latches_fault_without_service(hass, entry):
     hass.services.async_register("switch", "turn_on", record)
     entity_id, thermostat = await _entity(hass, entry)
     hass.states.async_set("switch.heater", "unavailable")
+    await hass.async_block_till_done()
+    assert thermostat.runtime.core.fault is None
+    assert not hass.states.get(entity_id).attributes["heater_available"]
+    assert hass.states.get(entity_id).attributes["control_state"] == "reconciling"
+    assert thermostat.runtime._actuator_unavailable_since is not None
+    thermostat.runtime._actuator_unavailable_since -= 2
+    thermostat.runtime.request()
     await hass.async_block_till_done()
     await hass.services.async_call(
         "climate",
@@ -111,6 +123,20 @@ async def test_actuator_unavailable_latches_fault_without_service(hass, entry):
     assert thermostat.runtime.core.fault == "actuator_unavailable"
     assert hass.states.get(entity_id).attributes["control_state"] == "fault"
     assert not calls
+
+
+async def test_transient_actuator_unavailability_recovers_without_fault(hass, entry):
+    entity_id, thermostat = await _entity(hass, entry)
+
+    hass.states.async_set("switch.heater", "unavailable")
+    await hass.async_block_till_done()
+    assert thermostat.runtime.core.fault is None
+    assert hass.states.get(entity_id).attributes["control_state"] == "reconciling"
+
+    hass.states.async_set("switch.heater", "off")
+    await hass.async_block_till_done()
+    assert thermostat.runtime.core.fault is None
+    assert hass.states.get(entity_id).attributes["heater_available"]
 
 
 async def test_unload_never_commands_the_switch(hass, entry):

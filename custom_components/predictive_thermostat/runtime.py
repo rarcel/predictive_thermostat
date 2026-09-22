@@ -82,6 +82,8 @@ class ControlRuntime:
         self._cycle_started: tuple[float, float, float, float] | None = None
         self._arrival_recorded_for: datetime | None = None
         self._indoor_alert_active = False
+        self.heater_available = False
+        self._actuator_unavailable_since: float | None = None
 
     @property
     def _indoor_notification_id(self) -> str:
@@ -403,7 +405,23 @@ class ControlRuntime:
             )
 
     def _read(self) -> None:
-        self.core.observe(self.adapter.observed())
+        observed = self.adapter.observed()
+        self.heater_available = observed is not None
+        if observed is None:
+            now = self.core.clock()
+            if self._actuator_unavailable_since is None:
+                self._actuator_unavailable_since = now
+            elif (
+                now - self._actuator_unavailable_since
+                >= self.settings.command_timeout
+            ):
+                # A source can briefly be unavailable while Home Assistant or
+                # its integration reloads. Do not turn that reconciliation
+                # period into a permanent fault, but lock a sustained loss.
+                self.core.observe(None)
+        else:
+            self._actuator_unavailable_since = None
+            self.core.observe(observed)
         entity_id = resolve(self.hass, self.sources[CONF_INDOOR])
         state = self.hass.states.get(entity_id) if entity_id else None
         self.indoor = temperature(self.hass, entity_id, UnitOfTemperature.CELSIUS)
@@ -478,14 +496,14 @@ class ControlRuntime:
             self.outdoor,
         )
         schedule_delays = self._apply_mode()
-        self.decision = self.core.decide(self.heat, self.target, self.indoor)
+        self.decision = self._decide()
         command = self.decision.command
         if command is not None and not self.settings.observation_only:
             # Persist before sending: a crash can never silently retry this intent.
             if await self._save(pending=True):
                 # Source, temperature or mode may have changed while writing storage.
                 self._read()
-                current = self.core.decide(self.heat, self.target, self.indoor)
+                current = self._decide()
                 if self._running and current.command is command:
                     self.core.start_command(command)
                     self._in_flight = True
@@ -499,9 +517,9 @@ class ControlRuntime:
                     finally:
                         self._in_flight = False
                     self._read()
-        self.decision = self.core.decide(self.heat, self.target, self.indoor)
+        self.decision = self._decide()
         await self._save()
-        self.decision = self.core.decide(self.heat, self.target, self.indoor)
+        self.decision = self._decide()
         if self.core.fault and self.core.fault != self._logged_fault:
             _LOGGER.error(
                 "Heater control stopped: %s; explicit fault reset required",
@@ -514,11 +532,24 @@ class ControlRuntime:
             for d in (self.decision.deadline, self.expires)
             if d is not None and d > now
         ]
+        if (
+            self._actuator_unavailable_since is not None
+            and self.core.fault is None
+        ):
+            deadlines.append(
+                self._actuator_unavailable_since + self.settings.command_timeout
+            )
         deadlines.extend(now + delay for delay in schedule_delays)
         if deadlines and self._running:
             self._timer = async_call_later(self.hass, min(deadlines) - now, self._wake)
         if self._running:
             self.changed()
+
+    def _decide(self) -> Decision:
+        """Block commands while an actuator source is being reconciled."""
+        if not self.heater_available and self.core.fault is None:
+            return Decision("reconciling")
+        return self.core.decide(self.heat, self.target, self.indoor)
 
     @callback
     def _wake(self, now: datetime) -> None:

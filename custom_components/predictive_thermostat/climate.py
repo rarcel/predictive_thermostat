@@ -91,7 +91,7 @@ class PredictiveThermostat(ClimateEntity):
             HVACAction.OFF
             if runtime.settings.observation_only
             else None
-            if core.observed is None
+            if not runtime.heater_available or core.observed is None
             else HVACAction.PREHEATING
             if runtime.preheating and core.observed
             else HVACAction.HEATING
@@ -109,7 +109,7 @@ class PredictiveThermostat(ClimateEntity):
             else runtime.decision.state,
             "observation_only": runtime.settings.observation_only,
             "outdoor_temperature": outdoor,
-            "heater_available": core.observed is not None,
+            "heater_available": runtime.heater_available,
             "fault_reason": core.fault,
             "pending_command": "on"
             if core.pending is True
@@ -122,7 +122,7 @@ class PredictiveThermostat(ClimateEntity):
                 else "outdoor_unavailable"
                 if outdoor is None
                 else "heater_unavailable"
-                if core.observed is None
+                if not runtime.heater_available
                 else None
             ),
             "schedule_target_temperature": self._display(
