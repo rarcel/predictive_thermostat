@@ -92,7 +92,7 @@ En cas de défaut verrouillé, corrigez d'abord sa cause puis cochez **Acquitter
 Pour mettre à jour, remplacez le seul dossier de l'intégration puis redémarrez Home Assistant. Pour la retirer, supprimez d'abord son entrée dans **Appareils et services**, puis son dossier si aucune zone ne l'utilise. Le déchargement et la suppression n'envoient aucune commande au switch.
 
 - **Sonde intérieure indisponible ou trop ancienne** : la régulation suspend les nouvelles demandes de chauffe, conserve l'entité climate visible et crée une notification persistante. Cette notification se ferme après la prochaine mesure intérieure valide. Les protections de durée minimale restent prioritaires.
-- **Switch indisponible ou défaut de commande** : le contrôle réel est verrouillé en défaut et une notification persistante explique l'acquittement requis. Rétablissez le switch puis acquittez le défaut dans les options.
+- **Switch indisponible** : une fois le switch de nouveau confirmé `on` ou `off`, le défaut d'indisponibilité est levé automatiquement. Les protections de cycle repartent de l'état observé. Les défauts de commande, de timeout ou de stockage restent verrouillés et demandent un acquittement dans les options.
 - **Mode HEAT ne change rien** : vérifiez d'abord que le mode observation est toujours actif ; c'est le comportement prévu par défaut.
 - **Intégration absente** : vérifiez le chemin de `manifest.json`, redémarrez HA et consultez les journaux de chargement.
 

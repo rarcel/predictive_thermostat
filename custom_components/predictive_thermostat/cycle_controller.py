@@ -49,6 +49,17 @@ class CycleController:
             self.pending = None
             self.pending_until = None
 
+    def recover_actuator_unavailable(self) -> bool:
+        """Clear only an availability fault after a confirmed source recovery."""
+        if (
+            self.fault == "actuator_unavailable"
+            and self.pending is None
+            and self.observed is not None
+        ):
+            self.fault = None
+            return True
+        return False
+
     def decide(self, heat: bool, target: float, temperature: float | None) -> Decision:
         """Return an intent; only start_command reserves an actual command."""
         now = self.clock()

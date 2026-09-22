@@ -461,6 +461,10 @@ class ControlRuntime:
         else:
             self._actuator_unavailable_since = None
             self.core.observe(observed)
+            if self.core.recover_actuator_unavailable():
+                # A confirmed source state restarts the normal min-off/min-on
+                # protections. Other fault types still require acknowledgement.
+                self._logged_fault = None
         entity_id = resolve(self.hass, self.sources[CONF_INDOOR])
         state = self.hass.states.get(entity_id) if entity_id else None
         self.indoor = temperature(self.hass, entity_id, UnitOfTemperature.CELSIUS)

@@ -83,6 +83,23 @@ def test_external_transition_and_disconnection(controller):
     assert core.decide(True, 20, 15).command is None
 
 
+def test_confirmed_actuator_recovery_clears_only_availability_fault(controller):
+    core, clock = controller
+    core.observe(False)
+    clock.now = 60
+    core.observe(None)
+    core.observe(False)
+
+    assert core.fault == "actuator_unavailable"
+    assert core.recover_actuator_unavailable()
+    assert core.fault is None
+    assert core.decide(True, 20, 15).state == "cooldown"
+
+    core.fail("command_timeout")
+    assert not core.recover_actuator_unavailable()
+    assert core.fault == "command_timeout"
+
+
 def test_hysteresis(controller):
     core, clock = controller
     core.observe(False)

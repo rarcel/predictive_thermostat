@@ -145,6 +145,28 @@ async def test_transient_actuator_unavailability_recovers_without_fault(hass, en
     assert hass.states.get(entity_id).attributes["heater_available"]
 
 
+async def test_confirmed_actuator_recovery_clears_availability_fault(hass, entry):
+    hass.config_entries.async_update_entry(
+        entry,
+        options={
+            "settings": Settings(command_timeout=1).as_dict(),
+        },
+    )
+    entity_id, thermostat = await _entity(hass, entry)
+    hass.states.async_set("switch.heater", "unavailable")
+    await hass.async_block_till_done()
+    assert thermostat.runtime._actuator_unavailable_since is not None
+    thermostat.runtime._actuator_unavailable_since -= 2
+    thermostat.runtime.request()
+    await hass.async_block_till_done()
+    assert thermostat.runtime.core.fault == "actuator_unavailable"
+
+    hass.states.async_set("switch.heater", "off")
+    await hass.async_block_till_done()
+    assert thermostat.runtime.core.fault is None
+    assert hass.states.get(entity_id).attributes["control_state"] == "off"
+
+
 async def test_unload_never_commands_the_switch(hass, entry):
     hass.config_entries.async_update_entry(
         entry, options={"settings": Settings(observation_only=False).as_dict()}
