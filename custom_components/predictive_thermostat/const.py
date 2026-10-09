@@ -1,6 +1,8 @@
 """Constants for the observation-only milestone."""
 
 DOMAIN = "predictive_thermostat"
+SERVICE_RESET_FAULT = "reset_fault"
+DATA_ENTITIES = "entities"
 CONF_INDOOR = "indoor_sensor"
 CONF_OUTDOOR = "outdoor_sensor"
 CONF_HEATER = "heater"

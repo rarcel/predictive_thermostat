@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.3
+
+- Nettoie la notification persistante dès que le défaut est acquitté, y compris après un rechargement de l'intégration.
+- Ajoute l'action administrateur `predictive_thermostat.reset_fault`, ciblée sur l'entité climate, avec vérification de l'état réel de l'actionneur et redémarrage des protections de cycle.
+
+## 0.5.2
+
+- Corrige l'acquittement d'un défaut verrouillé lors du rechargement des options.
+
 ## 0.5.1
 
 - Classifie l’intégration comme service afin qu’elle apparaisse dans la liste des intégrations, plutôt que seulement parmi les entrées de helper.

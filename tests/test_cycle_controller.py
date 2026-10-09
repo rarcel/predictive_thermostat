@@ -64,6 +64,41 @@ def test_timeout_is_sticky_even_with_late_confirmation(controller):
         assert core.decide(heat, 20, 10).command is None
 
 
+def test_fault_acknowledgement_restarts_protection_from_observed_state(controller):
+    core, clock = controller
+    core.observe(False)
+    core.fail("command_timeout")
+    clock.now = 100
+
+    assert core.acknowledge_fault()
+    assert core.fault is None
+    assert core.since == 100
+    assert core.decide(True, 10, 0).state == "cooldown"
+
+
+def test_fault_acknowledgement_rejects_uncertain_actuator(controller):
+    core, _clock = controller
+    core.observe(False)
+    core.fail("command_timeout")
+    core.pending = True
+
+    assert not core.acknowledge_fault()
+    assert core.fault == "command_timeout"
+
+
+def test_fault_acknowledgement_accepts_late_matching_confirmation(controller):
+    core, clock = controller
+    core.observe(False)
+    core.start_command(True)
+    clock.now = 11
+    core.observe(True)
+    assert core.fault == "command_timeout"
+
+    assert core.acknowledge_fault()
+    assert core.pending is None
+    assert core.fault is None
+
+
 def test_restart_reapplies_full_protection(controller):
     core, clock = controller
     clock.now = 1000

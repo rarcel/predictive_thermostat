@@ -18,7 +18,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import slugify
 from homeassistant.util.unit_conversion import TemperatureConverter
 
-from .const import DOMAIN
+from .const import DATA_ENTITIES, DOMAIN
 from .runtime import ControlRuntime
 
 
@@ -68,11 +68,20 @@ class PredictiveThermostat(ClimateEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
+        self.hass.data[DOMAIN][DATA_ENTITIES][self.entity_id] = self
         await self.runtime.start()
 
     async def async_will_remove_from_hass(self) -> None:
+        self.hass.data[DOMAIN][DATA_ENTITIES].pop(self.entity_id, None)
         await self.runtime.stop()
         await super().async_will_remove_from_hass()
+
+    async def async_reset_fault(self) -> None:
+        """Acknowledge a latched fault without bypassing cycle protections."""
+        if not self.runtime.reset_fault():
+            raise ServiceValidationError(
+                "The heater must have a confirmed state and no pending command"
+            )
 
     @callback
     def _refresh(self) -> None:

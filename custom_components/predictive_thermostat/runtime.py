@@ -88,6 +88,7 @@ class ControlRuntime:
         self._arrival_recorded_for: datetime | None = None
         self._indoor_alert_active = False
         self._fault_alert_active = False
+        self._fault_notification_checked = False
         self.heater_available = False
         self._actuator_unavailable_since: float | None = None
 
@@ -138,12 +139,14 @@ class ControlRuntime:
         """Expose a latched control fault in Home Assistant's notification center."""
         fault = self.core.fault
         if fault is None:
-            if self._fault_alert_active:
+            if self._fault_alert_active or not self._fault_notification_checked:
                 persistent_notification.async_dismiss(
                     self.hass, self._fault_notification_id
                 )
                 self._fault_alert_active = False
+            self._fault_notification_checked = True
             return
+        self._fault_notification_checked = True
         if self._fault_alert_active:
             return
         if self.hass.config.language.startswith("fr"):
@@ -166,6 +169,17 @@ class ControlRuntime:
             notification_id=self._fault_notification_id,
         )
         self._fault_alert_active = True
+
+    def reset_fault(self) -> bool:
+        """Acknowledge a fault after rereading the real actuator state."""
+        self._read()
+        if not self.core.acknowledge_fault():
+            return False
+        self._logged_fault = None
+        self._update_fault_notification()
+        self.request()
+        self.changed()
+        return True
 
     def _schedule_from_options(self) -> WeekSchedule:
         value = self.entry.options.get("schedule")
@@ -435,7 +449,11 @@ class ControlRuntime:
                 and state.state in ("on", "off")
             ):
                 value = (state.state == "on") != self.settings.inverted
-            self.core.observe(value)
+            # Valid transitions confirm pending commands immediately. An
+            # unavailable event is handled by _read(), which applies the
+            # configured grace period before latching a fault.
+            if value is not None:
+                self.core.observe(value)
         self.request()
 
     @callback

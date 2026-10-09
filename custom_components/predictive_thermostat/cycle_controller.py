@@ -60,6 +60,24 @@ class CycleController:
             return True
         return False
 
+    def acknowledge_fault(self) -> bool:
+        """Clear a latched fault only after a safe actuator reconciliation."""
+        if self.fault is None:
+            return True
+        if self.observed is None:
+            return False
+        if self.pending is not None:
+            if self.observed != self.pending:
+                return False
+            # A late but matching state is a valid confirmation once the user
+            # explicitly acknowledges the timeout.
+            self.pending = None
+        self.fault = None
+        self.pending_until = None
+        # Restart protection timing from the state confirmed at acknowledgement.
+        self.since = self.clock()
+        return True
+
     def decide(self, heat: bool, target: float, temperature: float | None) -> Decision:
         """Return an intent; only start_command reserves an actual command."""
         now = self.clock()

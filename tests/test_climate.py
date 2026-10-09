@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 from homeassistant.components.climate import DOMAIN as CLIMATE_DOMAIN
+from homeassistant.helpers import entity_component
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util.unit_system import US_CUSTOMARY_SYSTEM
 
@@ -29,6 +30,41 @@ async def test_observation(hass, entry, no_services):
     await hass.async_block_till_done()
     assert hass.states.get(entity_id).attributes["hvac_action"] == "off"
     assert len(hass.states.async_entity_ids(CLIMATE_DOMAIN)) == 1
+
+
+async def test_startup_dismisses_a_stale_fault_notification(hass, entry, no_services):
+    with patch(
+        "custom_components.predictive_thermostat.runtime."
+        "persistent_notification.async_dismiss"
+    ) as dismiss:
+        await loaded(hass, entry)
+
+    dismiss.assert_called_once()
+
+
+async def test_fault_can_be_reset_through_entity_action(hass, entry):
+    entity_id = await loaded(hass, entry)
+    component = hass.data[entity_component.DATA_INSTANCES]["climate"]
+    thermostat = component.get_entity(entity_id)
+    thermostat.runtime.core.fail("command_timeout")
+    thermostat.runtime.request()
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id).attributes["fault_reason"] == "command_timeout"
+
+    with patch(
+        "custom_components.predictive_thermostat.runtime."
+        "persistent_notification.async_dismiss"
+    ) as dismiss:
+        await hass.services.async_call(
+            DOMAIN,
+            "reset_fault",
+            {"entity_id": [entity_id]},
+            blocking=True,
+        )
+        await hass.async_block_till_done()
+
+    assert hass.states.get(entity_id).attributes["fault_reason"] is None
+    dismiss.assert_called_once()
 
 
 @pytest.mark.parametrize(
