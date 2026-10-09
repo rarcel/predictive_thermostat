@@ -5,6 +5,7 @@ from unittest.mock import patch
 import pytest
 from homeassistant.const import CONF_NAME
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import entity_component
 from homeassistant.helpers import entity_registry as er
 
 from custom_components.predictive_thermostat.const import (
@@ -125,6 +126,37 @@ async def test_options_reload(hass, inputs, entry, no_services):
     hass.states.async_set("sensor.inside", "30", {"unit_of_measurement": "°C"})
     await hass.async_block_till_done()
     assert hass.states.get(entity_id).attributes["current_temperature"] == 22
+
+
+async def test_options_fault_acknowledgement_survives_reload(
+    hass, inputs, entry, no_services
+):
+    """The unloading runtime must not adopt the new acknowledgement token."""
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    registry = er.async_get(hass)
+    entity_id = registry.async_get_entity_id("climate", DOMAIN, entry.unique_id)
+    component = hass.data[entity_component.DATA_INSTANCES]["climate"]
+    thermostat = component.get_entity(entity_id)
+    thermostat.runtime.core.fail("command_timeout")
+    thermostat.runtime.request()
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id).attributes["fault_reason"] == "command_timeout"
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            **{key: value for key, value in inputs.items() if key != CONF_NAME},
+            **Settings().as_dict(),
+            **WeekSchedule.default(20).fields(),
+            "reset_fault": True,
+        },
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert hass.states.get(entity_id).attributes["fault_reason"] is None
 
 
 async def test_options_rejects_unsafe_duration(hass, inputs, entry, no_services):

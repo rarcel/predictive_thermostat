@@ -46,6 +46,11 @@ class ControlRuntime:
         self.hass, self.entry, self.changed = hass, entry, changed
         self.sources = configured_sources(entry)
         self.settings = Settings.from_dict(dict(entry.options.get("settings", {})))
+        # Keep the acknowledgement generation owned by this runtime. Home
+        # Assistant updates entry.options before unloading the previous runtime;
+        # reading the live entry during unload would therefore save the old
+        # fault with the new token and immediately restore it after reload.
+        self._reset_fault_token = entry.options.get("reset_fault_token")
         self.core = CycleController(self.settings, hass.loop.time)
         self.adapter = SwitchAdapter(
             hass, self.sources[CONF_HEATER], self.settings.inverted
@@ -312,7 +317,7 @@ class ControlRuntime:
             "command_interrupted",
         }:
             raise ValueError("Invalid fault")
-        reset = self.entry.options.get("reset_fault_token")
+        reset = self._reset_fault_token
         if reset == saved.get("reset_fault_token"):
             if fault:
                 self.core.fail(fault)
@@ -370,7 +375,7 @@ class ControlRuntime:
             "pending": pending or self._in_flight or self.core.pending is not None,
             "sources": self.sources,
             "observation_only": self.settings.observation_only,
-            "reset_fault_token": self.entry.options.get("reset_fault_token"),
+            "reset_fault_token": self._reset_fault_token,
         }
 
     async def _save(self, pending: bool = False) -> bool:
