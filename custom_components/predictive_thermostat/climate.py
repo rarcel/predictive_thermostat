@@ -80,7 +80,7 @@ class PredictiveThermostat(ClimateEntity):
         """Acknowledge a latched fault without bypassing cycle protections."""
         if not self.runtime.reset_fault():
             raise ServiceValidationError(
-                "The heater must have a confirmed state and no pending command"
+                "The heater must currently report a confirmed on or off state"
             )
 
     @callback

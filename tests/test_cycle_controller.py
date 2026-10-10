@@ -78,9 +78,8 @@ def test_fault_acknowledgement_restarts_protection_from_observed_state(controlle
 
 def test_fault_acknowledgement_rejects_uncertain_actuator(controller):
     core, _clock = controller
-    core.observe(False)
+    core.observe(None)
     core.fail("command_timeout")
-    core.pending = True
 
     assert not core.acknowledge_fault()
     assert core.fault == "command_timeout"
@@ -97,6 +96,20 @@ def test_fault_acknowledgement_accepts_late_matching_confirmation(controller):
     assert core.acknowledge_fault()
     assert core.pending is None
     assert core.fault is None
+
+
+def test_fault_acknowledgement_accepts_confirmed_state_over_pending(controller):
+    core, clock = controller
+    core.observe(False)
+    core.start_command(True)
+    clock.now = 11
+    assert core.decide(True, 20, 10).state == "fault"
+
+    assert core.acknowledge_fault()
+    assert core.observed is False
+    assert core.pending is None
+    assert core.since == 11
+    assert core.decide(True, 20, 10).state == "cooldown"
 
 
 def test_restart_reapplies_full_protection(controller):

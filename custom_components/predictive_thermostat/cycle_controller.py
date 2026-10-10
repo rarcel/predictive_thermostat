@@ -66,12 +66,11 @@ class CycleController:
             return True
         if self.observed is None:
             return False
-        if self.pending is not None:
-            if self.observed != self.pending:
-                return False
-            # A late but matching state is a valid confirmation once the user
-            # explicitly acknowledges the timeout.
-            self.pending = None
+        # Explicit acknowledgement accepts the currently confirmed actuator
+        # state as authoritative, even when a previous command expected the
+        # opposite state. Full cycle protection restarts below before another
+        # command can be emitted.
+        self.pending = None
         self.fault = None
         self.pending_until = None
         # Restart protection timing from the state confirmed at acknowledgement.

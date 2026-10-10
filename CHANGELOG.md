@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.4
+
+- Permet à l'action d'acquittement d'abandonner une ancienne commande non confirmée lorsque le switch expose désormais un état réel `on` ou `off`.
+- Redémarre la durée minimale et le cooldown depuis cet état confirmé avant toute nouvelle commande.
+
 ## 0.5.3
 
 - Nettoie la notification persistante dès que le défaut est acquitté, y compris après un rechargement de l'intégration.

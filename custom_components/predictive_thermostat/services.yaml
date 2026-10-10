@@ -2,8 +2,8 @@ reset_fault:
   name: Acknowledge and reset a fault
   description: >-
     Clears a latched control fault after confirming that the heater state is
-    available and no command is pending. Cycle protections restart from the
-    currently observed heater state.
+    available. Any previous pending command is abandoned and cycle protections
+    restart from the currently observed heater state.
   target:
     entity:
       integration: predictive_thermostat

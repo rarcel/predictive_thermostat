@@ -2,7 +2,7 @@
 
 `predictive_thermostat` est une custom integration Home Assistant locale et paramétrable, conçue d'abord pour des chauffages à forte inertie tels qu'un poêle à granulés. Elle expose **une seule entité `climate` principale par zone**. Son planning interne signifie « température à atteindre à cette heure » ; la température extérieure alimente une prédiction explicable, locale et légère.
 
-## Version actuelle : 0.5.3 — thermostat prédictif avec commande protégée
+## Version actuelle : 0.5.4 — thermostat prédictif avec commande protégée
 
 L’intégration propose `OFF`, `HEAT` manuel et `AUTO`, une consigne, un planning hebdomadaire, un adaptateur `switch`, un contrôleur de cycle centralisé, une anticipation fallback, un apprentissage local, une météo facultative et un arrêt optimal facultatif. Elle peut commander le switch de chauffage lorsque le mode observation est explicitement désactivé. Le modèle ne peut jamais augmenter la consigne au-delà de la prochaine cible planifiée, ni contourner les protections matérielles.
 
@@ -80,7 +80,7 @@ Les changements d'options rechargent proprement l'intégration. Vérifiez que l'
 
 En cas de défaut verrouillé, corrigez d'abord sa cause puis cochez **Acquitter et réinitialiser un défaut verrouillé** dans les options. Cette action recharge l'intégration ; elle ne force pas de commande immédiate. Les attributs `control_state`, `fault_reason`, `pending_command`, `heater_available` et `fallback_reason` permettent d'examiner la situation sans exposer les références privées des sources dans les diagnostics.
 
-L'action `predictive_thermostat.reset_fault` permet aussi d'acquitter le défaut sans ouvrir les options. Elle refuse l'acquittement si l'état du chauffage n'est pas confirmé ou si une commande est encore en attente, puis redémarre les protections de cycle depuis l'état réellement observé. La carte Climate standard ne permet pas d'ajouter une action propre à une intégration ; placez un bouton à côté de la carte si vous souhaitez cet accès direct :
+L'action `predictive_thermostat.reset_fault` permet aussi d'acquitter le défaut sans ouvrir les options. Elle refuse l'acquittement si l'état du chauffage n'est pas confirmé. Une ancienne commande encore en attente est abandonnée au profit de l'état `on` ou `off` réellement observé, puis les protections de cycle redémarrent intégralement avant toute nouvelle commande. La carte Climate standard ne permet pas d'ajouter une action propre à une intégration ; placez un bouton à côté de la carte si vous souhaitez cet accès direct :
 
 ```yaml
 type: button
