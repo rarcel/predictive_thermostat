@@ -37,10 +37,11 @@ Le nombre de cycles domestiques est faible, les données sont bruitées et les c
 
 ## Construction d'un cycle exploitable
 
-Un cycle commence lors de la confirmation réelle de chauffe, pas lors de la simple commande. Il se termine lorsque :
+Un cycle commence lors de la confirmation réelle de chauffe, pas lors de la simple commande. Il n'est ouvert que si la température intérieure est strictement inférieure à la cible. Sa mesure utile se termine à la première mesure valide qui atteint la cible, même si l'actionneur reste ensuite allumé à cause de sa durée minimale de marche ou de la régulation. Cette période postérieure ne doit jamais entrer dans l'estimation de la vitesse de chauffe.
 
-- la cible est atteinte ;
-- le chauffage est arrêté ;
+Un cycle est abandonné sans apprentissage lorsque :
+
+- le chauffage est arrêté avant que la cible soit atteinte ;
 - la durée maximale est dépassée ;
 - une donnée indispensable devient invalide ;
 - une intervention manuelle rend l'observation ambiguë.
@@ -98,7 +99,7 @@ La V1 mesure l'overshoot mais ne met pas en œuvre un arrêt optimal prédictif.
 
 ## Invariants de sécurité
 
-- `min_preheat <= predicted_duration <= max_preheat`
+- si la cible est déjà atteinte, `predicted_duration = 0` ; sinon `min_preheat <= predicted_duration <= max_preheat` ;
 - coefficients finis ; aucune valeur NaN/infini ne peut être persistée ;
 - un modèle invalide est archivé/réinitialisé et le fallback est utilisé ;
 - l'apprentissage ne commande jamais directement l'actionneur ;

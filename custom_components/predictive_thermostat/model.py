@@ -154,6 +154,13 @@ class FallbackModel:
         ):
             return None
         gain = max(0.0, target - indoor)
+        confidence = min(0.9, 0.15 + self.learning.samples / 100)
+        if gain == 0:
+            return Prediction(
+                0.0,
+                confidence=confidence,
+                reason="learned" if self.learning.samples else "fallback",
+            )
         envelope = max(0.0, indoor - outdoor)
         minutes = (
             self.settings.ignition_delay
@@ -165,7 +172,6 @@ class FallbackModel:
         minutes = min(
             self.settings.max_preheat, max(self.settings.min_preheat, minutes)
         )
-        confidence = min(0.9, 0.15 + self.learning.samples / 100)
         return Prediction(
             minutes,
             confidence=confidence,

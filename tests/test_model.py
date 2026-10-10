@@ -36,3 +36,13 @@ def test_fallback_increases_with_target_gain():
     high = model.predict(18, 5, 22)
     assert low is not None and high is not None
     assert high.minutes > low.minutes
+
+
+def test_fallback_is_zero_when_target_is_already_reached():
+    model = FallbackModel(Settings(min_preheat=10))
+
+    at_target = model.predict(20, 5, 20)
+    above_target = model.predict(21, 5, 20)
+
+    assert at_target is not None and at_target.minutes == 0
+    assert above_target is not None and above_target.minutes == 0

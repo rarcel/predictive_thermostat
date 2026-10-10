@@ -85,6 +85,7 @@ class ControlRuntime:
         self._last_saved: dict[str, Any] | None = None
         self._logged_fault: str | None = None
         self._cycle_started: tuple[float, float, float, float] | None = None
+        self._cycle_reached_target = False
         self._arrival_recorded_for: datetime | None = None
         self._indoor_alert_active = False
         self._fault_alert_active = False
@@ -515,21 +516,28 @@ class ControlRuntime:
         self._learn_cycle()
 
     def _learn_cycle(self) -> None:
-        """Aggregate only a confirmed, plausible cycle that reached its target."""
-        if self.core.observed and self._cycle_started is None:
-            if self.indoor is not None and self.outdoor is not None:
+        """Measure confirmed heating only until the target is first reached."""
+        if self.core.observed:
+            if (
+                self._cycle_started is None
+                and not self._cycle_reached_target
+                and self.indoor is not None
+                and self.outdoor is not None
+                and self.indoor < self.target
+            ):
                 self._cycle_started = (
                     self.core.clock(),
                     self.indoor,
                     self.outdoor,
                     self.target,
                 )
-            return
-        if self.core.observed or self._cycle_started is None:
-            return
-        started, indoor, outdoor, target = self._cycle_started
-        self._cycle_started = None
-        if self.indoor is not None and self.indoor >= target:
+            if self._cycle_started is None or self.indoor is None:
+                return
+            started, indoor, outdoor, target = self._cycle_started
+            if self.indoor < target:
+                return
+            self._cycle_started = None
+            self._cycle_reached_target = True
             cycle = HeatingCycle(
                 indoor, outdoor, target, (self.core.clock() - started) / 60
             )
@@ -537,6 +545,12 @@ class ControlRuntime:
                 cycle, self.settings
             )
             self.model = FallbackModel(self.settings, self.learning)
+            return
+
+        # An off confirmation ends the physical heating session. Discard an
+        # incomplete sample and allow the next confirmed start to learn again.
+        self._cycle_started = None
+        self._cycle_reached_target = False
 
     async def _drain(self) -> None:
         while self._dirty and self._running:

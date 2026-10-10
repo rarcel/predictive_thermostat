@@ -2,7 +2,7 @@
 
 `predictive_thermostat` est une custom integration Home Assistant locale et paramétrable, conçue d'abord pour des chauffages à forte inertie tels qu'un poêle à granulés. Elle expose **une seule entité `climate` principale par zone**. Son planning interne signifie « température à atteindre à cette heure » ; la température extérieure alimente une prédiction explicable, locale et légère.
 
-## Version actuelle : 0.5.4 — thermostat prédictif avec commande protégée
+## Version actuelle : 0.5.5 — thermostat prédictif avec commande protégée
 
 L’intégration propose `OFF`, `HEAT` manuel et `AUTO`, une consigne, un planning hebdomadaire, un adaptateur `switch`, un contrôleur de cycle centralisé, une anticipation fallback, un apprentissage local, une météo facultative et un arrêt optimal facultatif. Elle peut commander le switch de chauffage lorsque le mode observation est explicitement désactivé. Le modèle ne peut jamais augmenter la consigne au-delà de la prochaine cible planifiée, ni contourner les protections matérielles.
 
@@ -49,6 +49,8 @@ Après publication du dépôt Git, ajouter le dépôt dans **HACS → Intégrati
 L'entité climate démarre en `OFF`, avec le mode observation actif. Une consigne et les modes `OFF`/`HEAT`/`AUTO` sont proposés pour permettre l'observation de la décision de cycle. Aucune action sur l'entité ne commande alors le switch.
 
 En `AUTO`, le planning interne résout la cible active et le prochain objectif. Chaque ligne quotidienne utilise le format `HH:MM=température`, par exemple `06:30=19, 18:00=21`. Chaque jour doit contenir au moins un horaire unique ; les objectifs sont des températures **à atteindre** à leur heure. Pour une prochaine hausse, le fallback calcule une fenêtre de préchauffage bornée à partir du délai d'allumage, du gain à obtenir, de la température extérieure et d'une marge configurable. Une absence de température extérieure supprime l'anticipation et conserve le changement de cible à l'heure prévue. Une modification manuelle de consigne pendant `AUTO` devient une dérogation jusqu'au prochain point, puis le planning reprend. Les horaires sont conservés en heure locale Home Assistant. Une heure inexistante au passage à l'heure d'été est reportée au premier instant valide ; une heure répétée en automne est exécutée une seule fois, lors de sa première occurrence.
+
+L'apprentissage mesure exclusivement le temps entre l'allumage réellement confirmé et la première atteinte de la consigne. La marche minimale, le dépassement et la régulation après cette première atteinte ne sont pas intégrés à la vitesse de chauffe. Si la prochaine consigne est déjà atteinte, la durée prédite est nulle.
 
 Pour préparer un essai contrôlé sur une instance de test, ouvrez **Configurer / Options** de l'intégration et renseignez toutes les options :
 

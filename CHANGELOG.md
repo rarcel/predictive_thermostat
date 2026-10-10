@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.5
+
+- Limite chaque échantillon d'apprentissage à la période entre l'allumage confirmé et la première atteinte de la consigne.
+- Exclut de la vitesse apprise la marche minimale, le dépassement et la régulation après la consigne.
+- Ramène la durée prédite à zéro lorsque la prochaine consigne est déjà atteinte.
+
 ## Maintenance
 
 - Retire le workflow GitHub Actions non fonctionnel ; les commandes locales de validation restent documentées.

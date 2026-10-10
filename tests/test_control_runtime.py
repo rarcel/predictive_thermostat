@@ -197,6 +197,44 @@ async def test_registry_resubscribe_survives_a_consumed_listener(hass, entry):
     assert len(thermostat.runtime._source_listeners) == 2
 
 
+async def test_learning_stops_when_target_is_first_reached(hass, entry):
+    _, thermostat = await _entity(hass, entry)
+    runtime = thermostat.runtime
+    runtime.target = 21
+    runtime.indoor = 18
+    runtime.outdoor = 5
+    runtime.core.observe(True)
+    runtime._learn_cycle()
+    assert runtime._cycle_started is not None
+
+    started, indoor, outdoor, target = runtime._cycle_started
+    runtime._cycle_started = (started - 600, indoor, outdoor, target)
+    runtime.indoor = 21
+    runtime._learn_cycle()
+
+    assert runtime.learning.samples == 1
+    assert runtime._cycle_reached_target
+    assert runtime._cycle_started is None
+
+    runtime.indoor = 22
+    runtime._learn_cycle()
+    assert runtime.learning.samples == 1
+
+
+async def test_learning_ignores_heating_started_at_or_above_target(hass, entry):
+    _, thermostat = await _entity(hass, entry)
+    runtime = thermostat.runtime
+    runtime.target = 20
+    runtime.indoor = 20
+    runtime.outdoor = 5
+    runtime.core.observe(True)
+
+    runtime._learn_cycle()
+
+    assert runtime._cycle_started is None
+    assert runtime.learning.samples == 0
+
+
 async def test_auto_uses_schedule_then_manual_override(hass, entry):
     schedule = WeekSchedule.default(17)
     hass.config_entries.async_update_entry(
