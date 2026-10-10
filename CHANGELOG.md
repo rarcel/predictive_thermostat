@@ -1,5 +1,9 @@
 # Changelog
 
+## Maintenance
+
+- Retire le workflow GitHub Actions non fonctionnel ; les commandes locales de validation restent documentées.
+
 ## 0.5.4
 
 - Permet à l'action d'acquittement d'abandonner une ancienne commande non confirmée lorsque le switch expose désormais un état réel `on` ou `off`.

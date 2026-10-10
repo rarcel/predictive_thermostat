@@ -52,7 +52,7 @@ Les paramètres constructeur, l'emplacement des sondes, le planning souhaité et
 2. Écrire les tests de flow, validation, identité, création d'une seule entité, setup/unload/reload et observation sans appels de services.
 3. Créer le manifeste, le Config Flow minimal (zone, sondes, switch candidat), les traductions anglaise/française et l'entité passive. Une source temporairement indisponible peut être sélectionnée si son registre valide son type ; aucune validation ne doit allumer un appareil.
 4. Ajouter les tests de changement de mesure, données invalides, listeners retirés, stabilité d'identité, diagnostic expurgé et absence de commande à chaque transition du cycle de vie.
-5. Exécuter Ruff, mypy et tous les tests ; CI Linux sur version épinglée, validation du manifeste. Documenter l'installation sur instance factice et les limites OFF/observation. Aucun test sur l'instance domestique.
+5. Exécuter localement Ruff, mypy et tous les tests sur la version épinglée, puis valider le manifeste. Documenter l'installation sur instance factice et les limites OFF/observation. Aucun test sur l'instance domestique.
 
 Pas de moteur prédictif, de planning opérationnel, de commande switch, d'apprentissage ni de déploiement pendant cet incrément. L'architecture réserve schedule.py, model.py, cycle_controller.py, observations.py, storage.py et un adaptateur, créés uniquement avec leurs incréments et tests. Aucun coordinator, services.yaml ou capteur supplémentaire sans besoin démontré.
 
@@ -62,7 +62,6 @@ Pas de moteur prédictif, de planning opérationnel, de commande switch, d'appre
 .gitignore
 pyproject.toml
 requirements_test.txt
-.github/workflows/ci.yml
 custom_components/predictive_thermostat/__init__.py
 custom_components/predictive_thermostat/manifest.json
 custom_components/predictive_thermostat/const.py
