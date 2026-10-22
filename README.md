@@ -2,7 +2,7 @@
 
 `predictive_thermostat` est une custom integration Home Assistant locale et paramétrable, conçue d'abord pour des chauffages à forte inertie tels qu'un poêle à granulés. Elle expose **une seule entité `climate` principale par zone**. Son planning interne signifie « température à atteindre à cette heure » ; la température extérieure alimente une prédiction explicable, locale et légère.
 
-## Version actuelle : 0.6.0 — thermostat prédictif avec carte Lovelace
+## Version actuelle : 0.6.1 — thermostat prédictif avec carte Lovelace
 
 L’intégration propose `OFF`, `HEAT` manuel et `AUTO`, une consigne, un planning hebdomadaire, un adaptateur `switch`, un contrôleur de cycle centralisé, une anticipation fallback, un apprentissage local, une météo facultative et un arrêt optimal facultatif. Elle peut commander le switch de chauffage lorsque le mode observation est explicitement désactivé. Le modèle ne peut jamais augmenter la consigne au-delà de la prochaine cible planifiée, ni contourner les protections matérielles.
 
@@ -84,7 +84,7 @@ En cas de défaut verrouillé, corrigez d'abord sa cause puis cochez **Acquitter
 
 L'action `predictive_thermostat.reset_fault` permet aussi d'acquitter le défaut sans ouvrir les options. Elle refuse l'acquittement si l'état du chauffage n'est pas confirmé. Une ancienne commande encore en attente est abandonnée au profit de l'état `on` ou `off` réellement observé, puis les protections de cycle redémarrent intégralement avant toute nouvelle commande.
 
-La carte fournie ajoute ces actions à la carte thermostat et affiche les informations prédictives dans son menu :
+La carte fournie ajoute ces actions à la carte thermostat. Son bouton d’informations natif ouvre les informations prédictives et permet ensuite d’accéder au dialogue Home Assistant standard :
 
 ```yaml
 type: custom:predictive-thermostat-card

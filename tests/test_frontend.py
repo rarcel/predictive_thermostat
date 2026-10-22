@@ -36,3 +36,6 @@ def test_card_contains_actions_and_predictive_details():
     assert "confirmed_off_period: confirmedOffPeriod" in source
     assert "predicted_start_time" in source
     assert "prediction_confidence" in source
+    assert 'addEventListener("hass-more-info"' in source
+    assert 'new CustomEvent("hass-more-info"' in source
+    assert 'class="menu-button"' not in source

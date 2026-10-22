@@ -2,7 +2,7 @@ const CARD_TYPE = "predictive-thermostat-card";
 
 const TEXT = {
   en: {
-    menu: "Predictive heating details", close: "Close predictive heating details",
+    menu: "Predictive heating details", close: "Close", nativeInfo: "Home Assistant details",
     controlState: "Control state", heater: "Heater", available: "Available",
     unavailable: "Unavailable", outdoor: "Outdoor temperature",
     scheduleTarget: "Schedule target", nextTarget: "Next target", nextTime: "Target time",
@@ -15,7 +15,7 @@ const TEXT = {
     success: "Reset request accepted.", failed: "Reset failed", minutes: "min",
   },
   fr: {
-    menu: "Détails de la chauffe prédictive", close: "Fermer les détails de la chauffe prédictive",
+    menu: "Détails de la chauffe prédictive", close: "Fermer", nativeInfo: "Informations Home Assistant",
     controlState: "État du contrôle", heater: "Chauffage", available: "Disponible",
     unavailable: "Indisponible", outdoor: "Température extérieure",
     scheduleTarget: "Consigne planifiée", nextTarget: "Prochaine consigne", nextTime: "Heure cible",
@@ -33,7 +33,6 @@ class PredictiveThermostatCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._expanded = false;
     this._nativeCard = null;
   }
 
@@ -52,7 +51,7 @@ class PredictiveThermostatCard extends HTMLElement {
     this._update();
   }
 
-  getCardSize() { return this._expanded ? 8 : 5; }
+  getCardSize() { return 7; }
   _language() { return this._hass?.language?.toLowerCase().startsWith("fr") ? "fr" : "en"; }
   _t(key) { return TEXT[this._language()][key]; }
 
@@ -60,38 +59,36 @@ class PredictiveThermostatCard extends HTMLElement {
     if (!this.shadowRoot || this.shadowRoot.childElementCount) return;
     this.shadowRoot.innerHTML = `
       <style>
-        :host { display: block; position: relative; }
+        :host { display: block; }
         #native { min-height: 120px; }
-        .menu-button { position: absolute; top: 8px; right: 8px; z-index: 2; width: 40px; height: 40px; padding: 8px; border: 0; border-radius: 50%; color: var(--primary-text-color); background: transparent; cursor: pointer; }
-        .menu-button:hover { background: var(--secondary-background-color); }
-        .menu-button:focus-visible { outline: 2px solid var(--primary-color); }
-        .menu-button ha-icon { pointer-events: none; }
-        .details { margin-top: 8px; padding: 16px; }
-        .details[hidden] { display: none; }
+        dialog { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); box-sizing: border-box; padding: 20px; border: 0; border-radius: var(--ha-card-border-radius, 12px); color: var(--primary-text-color); background: var(--card-background-color); box-shadow: var(--ha-card-box-shadow); overflow: auto; }
+        dialog::backdrop { background: rgba(0, 0, 0, 0.48); }
         h2 { margin: 0 0 14px; font-size: 18px; font-weight: 500; }
         dl { display: grid; grid-template-columns: minmax(130px, 1fr) 1fr; gap: 8px 16px; margin: 0; }
         dt { color: var(--secondary-text-color); }
         dd { margin: 0; overflow-wrap: anywhere; }
-        .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+        .actions, .footer { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
         ha-button { flex: 1 1 190px; }
+        .footer { justify-content: flex-end; border-top: 1px solid var(--divider-color); padding-top: 12px; }
+        .footer ha-button { flex: 0 1 auto; }
         .status { min-height: 20px; margin-top: 10px; color: var(--secondary-text-color); }
         .status.error { color: var(--error-color); }
         @media (max-width: 450px) { dl { grid-template-columns: 1fr; gap: 2px; } dd { margin-bottom: 8px; } }
       </style>
       <div id="native"></div>
-      <button class="menu-button" type="button"><ha-icon icon="mdi:menu"></ha-icon></button>
-      <ha-card class="details" hidden>
+      <dialog class="details">
         <h2></h2><dl></dl>
         <div class="actions"><ha-button class="reset" appearance="filled"></ha-button><ha-button class="reset-long"></ha-button></div>
         <div class="status" role="status" aria-live="polite"></div>
-      </ha-card>`;
-    this.shadowRoot.querySelector(".menu-button").addEventListener("click", () => {
-      this._expanded = !this._expanded;
-      this._update();
-      this.dispatchEvent(new Event("iron-resize", { bubbles: true, composed: true }));
-    });
+        <div class="footer"><ha-button class="native-info"></ha-button><ha-button class="close"></ha-button></div>
+      </dialog>`;
     this.shadowRoot.querySelector(".reset").addEventListener("click", () => this._reset(false));
     this.shadowRoot.querySelector(".reset-long").addEventListener("click", () => this._reset(true));
+    this.shadowRoot.querySelector(".native-info").addEventListener("click", () => this._openNativeInfo());
+    this.shadowRoot.querySelector(".close").addEventListener("click", () => this._closeDetails());
+    this.shadowRoot.querySelector("dialog").addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) this._closeDetails();
+    });
   }
 
   async _ensureNativeCard() {
@@ -100,6 +97,7 @@ class PredictiveThermostatCard extends HTMLElement {
     const cardConfig = { type: "thermostat", entity: this._config.entity };
     if (this._config.name) cardConfig.name = this._config.name;
     this._nativeCard = await helpers.createCardElement(cardConfig);
+    this._nativeCard.addEventListener("hass-more-info", (event) => this._openDetails(event));
     this.shadowRoot.querySelector("#native").replaceChildren(this._nativeCard);
     if (this._hass) this._nativeCard.hass = this._hass;
   }
@@ -139,15 +137,11 @@ class PredictiveThermostatCard extends HTMLElement {
 
   _update() {
     if (!this.shadowRoot || !this._config) return;
-    const details = this.shadowRoot.querySelector(".details");
-    const button = this.shadowRoot.querySelector(".menu-button");
-    details.hidden = !this._expanded;
-    button.title = this._t(this._expanded ? "close" : "menu");
-    button.setAttribute("aria-label", button.title);
-    button.setAttribute("aria-expanded", String(this._expanded));
     this.shadowRoot.querySelector("h2").textContent = this._t("menu");
     this.shadowRoot.querySelector(".reset").textContent = this._t("reset");
     this.shadowRoot.querySelector(".reset-long").textContent = this._t("resetLong");
+    this.shadowRoot.querySelector(".native-info").textContent = this._t("nativeInfo");
+    this.shadowRoot.querySelector(".close").textContent = this._t("close");
     const state = this._hass?.states?.[this._config.entity];
     if (!state) return;
     const list = this.shadowRoot.querySelector("dl");
@@ -160,6 +154,26 @@ class PredictiveThermostatCard extends HTMLElement {
         : rawValue === null || rawValue === undefined || rawValue === "" ? this._t("none") : String(rawValue);
       list.append(term, value);
     }
+  }
+
+  _openDetails(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this._update();
+    const dialog = this.shadowRoot.querySelector("dialog");
+    if (!dialog.open) dialog.showModal();
+  }
+
+  _closeDetails() {
+    const dialog = this.shadowRoot.querySelector("dialog");
+    if (dialog.open) dialog.close();
+  }
+
+  _openNativeInfo() {
+    this._closeDetails();
+    this.dispatchEvent(new CustomEvent("hass-more-info", {
+      detail: { entityId: this._config.entity }, bubbles: true, composed: true,
+    }));
   }
 
   async _reset(confirmedOffPeriod) {

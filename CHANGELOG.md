@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.1
+
+- Supprime le bouton menu ajouté par la carte, qui recouvrait le bouton natif du thermostat.
+- Réutilise le bouton d’informations Home Assistant existant pour ouvrir les données prédictives et les actions de réinitialisation.
+- Conserve un accès explicite au dialogue Home Assistant standard depuis le panneau prédictif.
+
 ## 0.6.0
 
 - Fournit une véritable carte Lovelace qui réutilise la carte thermostat native.
