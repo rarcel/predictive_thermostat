@@ -16,7 +16,17 @@ Avant apprentissage, utiliser :
 
 où `loss_margin` augmente avec l'écart `T_inside - T_outside`. Toutes les valeurs sont configurables avec défauts prudents, puis l'estimation est bornée entre `min_preheat` et `max_preheat`.
 
-## V1 — modèle recommandé
+## V1 — modèle implémenté
+
+La durée courante est calculée en minutes par :
+
+`ignition_delay + gain / learned_heating_rate + max(0, T_inside - T_outside_used) * learned_loss_factor + preheat_margin + mean_arrival_error`
+
+`T_outside_used` est la prévision horaire à l'heure cible lorsqu'elle est disponible, sinon la sonde extérieure. Le résultat est borné entre `min_preheat` et `max_preheat`. L'entité `climate` expose la température et la source utilisées, chaque terme de cette somme ainsi que le résultat avant bornage.
+
+La vitesse de chauffe est mise à jour sur les cycles confirmés jusqu'à la première atteinte de la consigne. Le facteur de pertes est ajusté lentement à partir de la durée résiduelle expliquée par l'écart intérieur/extérieur. La correction d'arrivée est une moyenne exponentielle lente et distincte des paramètres physiques.
+
+## Évolution possible
 
 Commencer par une régression robuste sur la progression thermique ou la durée, avec caractéristiques peu nombreuses :
 
@@ -80,6 +90,8 @@ Après un objectif programmé, calculer :
 - négatif : arrivée trop précoce.
 
 Mettre à jour une marge adaptative lentement et dans des bornes strictes. Ne pas confondre cette correction globale avec les paramètres physiques du modèle.
+
+L'observation reste active après l'heure cible afin d'apprendre aussi un retard. Elle est abandonnée lors d'une consigne manuelle ou d'un changement de mode. Si la cible n'est toujours pas atteinte après `max_preheat`, l'erreur enregistrée est plafonnée à cette valeur.
 
 ## Confiance
 

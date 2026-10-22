@@ -287,6 +287,29 @@ async def test_learning_ignores_heating_started_at_or_above_target(hass, entry):
     assert runtime.learning.samples == 0
 
 
+async def test_late_schedule_arrival_updates_prediction_correction(hass, entry):
+    """Reaching the target after its scheduled time must still be learned."""
+    _, thermostat = await _entity(hass, entry)
+    runtime = thermostat.runtime
+    target_at = datetime(2026, 9, 21, 7, 15, tzinfo=ZoneInfo("Europe/Paris"))
+    runtime._arrival_expected = (
+        target_at,
+        20.5,
+        datetime(2026, 9, 21, 6, 50, tzinfo=ZoneInfo("Europe/Paris")),
+    )
+    runtime.indoor = 20.5
+
+    runtime._record_arrival(
+        datetime(2026, 9, 21, 7, 34, tzinfo=ZoneInfo("Europe/Paris"))
+    )
+
+    assert abs(runtime.learning.mean_arrival_error - 0.95) < 1e-9
+    assert runtime._arrival_recorded_for == target_at
+    assert runtime._arrival_expected is None
+    saved = runtime._snapshot()
+    assert saved["arrival_recorded_for"] == target_at.isoformat()
+
+
 async def test_auto_uses_schedule_then_manual_override(hass, entry):
     schedule = WeekSchedule.default(17)
     hass.config_entries.async_update_entry(
@@ -335,6 +358,11 @@ async def test_auto_starts_only_inside_bounded_preheat_window(hass, entry):
     state = hass.states.get(entity_id)
     assert state.attributes["temperature"] == 22
     assert state.attributes["predicted_heating_minutes"] is not None
+    assert state.attributes["prediction_outdoor_temperature"] == 8
+    assert state.attributes["prediction_outdoor_source"] == "sensor"
+    assert state.attributes["prediction_temperature_gain_minutes"] > 0
+    assert state.attributes["prediction_outdoor_loss_minutes"] > 0
+    assert state.attributes["learned_heating_rate"] > 0
 
 
 async def test_auto_without_outdoor_temperature_does_not_preheat(hass, entry):

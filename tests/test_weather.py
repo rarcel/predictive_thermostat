@@ -27,11 +27,11 @@ async def test_weather_response_and_fallbacks():
             }
         }
     )
-    assert await async_forecast_temperature(hass, "weather.test", target, 8) == 4
-    assert await async_forecast_temperature(FakeHass(), None, target, 8) == 8
-    assert (
-        await async_forecast_temperature(
-            FakeHass(error=RuntimeError()), "weather.test", target, 8
-        )
-        == 8
+    forecast = await async_forecast_temperature(hass, "weather.test", target, 8)
+    assert (forecast.temperature, forecast.source) == (4, "forecast")
+    fallback = await async_forecast_temperature(FakeHass(), None, target, 8)
+    assert (fallback.temperature, fallback.source) == (8, "sensor")
+    failed = await async_forecast_temperature(
+        FakeHass(error=RuntimeError()), "weather.test", target, 8
     )
+    assert (failed.temperature, failed.source) == (8, "sensor")

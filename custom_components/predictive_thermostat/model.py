@@ -14,6 +14,12 @@ class Prediction:
     minutes: float
     confidence: float
     reason: str | None = None
+    ignition_minutes: float = 0.0
+    temperature_gain_minutes: float = 0.0
+    outdoor_loss_minutes: float = 0.0
+    margin_minutes: float = 0.0
+    arrival_correction_minutes: float = 0.0
+    unbounded_minutes: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -162,18 +168,29 @@ class FallbackModel:
                 reason="learned" if self.learning.samples else "fallback",
             )
         envelope = max(0.0, indoor - outdoor)
-        minutes = (
-            self.settings.ignition_delay
-            + gain / self.learning.heating_rate
-            + envelope * self.learning.loss_factor
-            + self.settings.preheat_margin
-            + self.learning.mean_arrival_error
+        ignition = self.settings.ignition_delay
+        temperature_gain = gain / self.learning.heating_rate
+        outdoor_loss = envelope * self.learning.loss_factor
+        margin = self.settings.preheat_margin
+        arrival_correction = self.learning.mean_arrival_error
+        unbounded = (
+            ignition
+            + temperature_gain
+            + outdoor_loss
+            + margin
+            + arrival_correction
         )
         minutes = min(
-            self.settings.max_preheat, max(self.settings.min_preheat, minutes)
+            self.settings.max_preheat, max(self.settings.min_preheat, unbounded)
         )
         return Prediction(
             minutes,
             confidence=confidence,
             reason="learned" if self.learning.samples else "fallback",
+            ignition_minutes=ignition,
+            temperature_gain_minutes=temperature_gain,
+            outdoor_loss_minutes=outdoor_loss,
+            margin_minutes=margin,
+            arrival_correction_minutes=arrival_correction,
+            unbounded_minutes=unbounded,
         )

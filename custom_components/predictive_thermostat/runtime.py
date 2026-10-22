@@ -67,6 +67,7 @@ class ControlRuntime:
         self.schedule_resolution: ScheduleResolution | None = None
         self.outdoor: float | None = None
         self.forecast_outdoor: float | None = None
+        self.forecast_source: str | None = None
         self.prediction: Prediction | None = None
         self.predicted_start: datetime | None = None
         self.preheating = False
@@ -87,6 +88,7 @@ class ControlRuntime:
         self._cycle_started: tuple[float, float, float, float] | None = None
         self._cycle_reached_target = False
         self._arrival_recorded_for: datetime | None = None
+        self._arrival_expected: tuple[datetime, float, datetime] | None = None
         self._indoor_alert_active = False
         self._fault_alert_active = False
         self._fault_notification_checked = False
@@ -205,6 +207,11 @@ class ControlRuntime:
         self.preheating = False
         if self.override is not None and now >= self.override[1]:
             self.override = None
+        if self.mode != "auto" or self.override is not None:
+            # A manual intervention makes attribution to the prediction ambiguous.
+            self._arrival_expected = None
+        else:
+            self._record_arrival(now)
         if self.mode == "auto":
             self.heat = True
             self.target = self.schedule_resolution.current.temperature
@@ -225,23 +232,19 @@ class ControlRuntime:
                     self.predicted_start = self.schedule_resolution.next_at - timedelta(
                         minutes=self.prediction.minutes
                     )
+                    if (
+                        self._arrival_recorded_for
+                        != self.schedule_resolution.next_at
+                    ):
+                        self._arrival_expected = (
+                            self.schedule_resolution.next_at,
+                            self.schedule_resolution.next.temperature,
+                            self.predicted_start,
+                        )
+                        self._record_arrival(now)
                     if now >= self.predicted_start:
                         self.target = self.schedule_resolution.next.temperature
                         self.preheating = now < self.schedule_resolution.next_at
-                        if (
-                            self.indoor is not None
-                            and self.indoor >= self.target
-                            and self._arrival_recorded_for
-                            != self.schedule_resolution.next_at
-                        ):
-                            error = (
-                                now - self.schedule_resolution.next_at
-                            ).total_seconds() / 60
-                            self.learning = self.learning.record_arrival_error(error)
-                            self.model = FallbackModel(self.settings, self.learning)
-                            self._arrival_recorded_for = (
-                                self.schedule_resolution.next_at
-                            )
                     else:
                         deadlines.append((self.predicted_start - now).total_seconds())
             if (
@@ -261,12 +264,35 @@ class ControlRuntime:
             self.target = self.manual_target
         return [delay for delay in deadlines if delay > 0]
 
+    def _record_arrival(self, now: datetime) -> None:
+        """Learn an early or late arrival after the prediction window opens."""
+        if self._arrival_expected is None:
+            return
+        target_at, target, not_before = self._arrival_expected
+        if now < not_before:
+            return
+        reached = self.indoor is not None and self.indoor >= target
+        expired = now >= target_at + timedelta(minutes=self.settings.max_preheat)
+        if not reached and not expired:
+            return
+        error = (
+            (now - target_at).total_seconds() / 60
+            if reached
+            else self.settings.max_preheat
+        )
+        self.learning = self.learning.record_arrival_error(error)
+        self.model = FallbackModel(self.settings, self.learning)
+        self._arrival_recorded_for = target_at
+        self._arrival_expected = None
+
     def set_mode(self, mode: str) -> None:
         """Set a user mode; AUTO starts from the current schedule target."""
         if mode not in {"off", "heat", "auto"}:
             raise ValueError("Unsupported mode")
         if mode == "auto" and self.mode != "auto":
             self.override = None
+        if mode != "auto":
+            self._arrival_expected = None
         self.mode = mode
         self.request()
 
@@ -275,6 +301,7 @@ class ControlRuntime:
         if self.mode == "auto":
             resolution = self.schedule.resolve(self._local_now())
             self.override = (target, resolution.next_at)
+            self._arrival_expected = None
         else:
             self.manual_target = target
         self.request()
@@ -356,6 +383,37 @@ class ControlRuntime:
             mode = saved.get("mode", "heat" if saved["heat"] else "off")
             if mode not in {"off", "heat", "auto"}:
                 raise ValueError("Invalid mode")
+            recorded_for = saved.get("arrival_recorded_for")
+            if recorded_for is not None:
+                try:
+                    recorded = datetime.fromisoformat(recorded_for)
+                except (TypeError, ValueError) as err:
+                    raise ValueError("Invalid arrival record") from err
+                if recorded.tzinfo is None:
+                    raise ValueError("Invalid arrival record")
+                self._arrival_recorded_for = recorded
+            expected = saved.get("arrival_expected")
+            if expected is not None:
+                try:
+                    target_at = datetime.fromisoformat(expected["target_at"])
+                    expected_target = float(expected["target"])
+                    not_before = datetime.fromisoformat(expected["not_before"])
+                except (KeyError, TypeError, ValueError) as err:
+                    raise ValueError("Invalid arrival expectation") from err
+                if (
+                    target_at.tzinfo is None
+                    or not_before.tzinfo is None
+                    or not math.isfinite(expected_target)
+                    or not self.settings.min_temperature
+                    <= expected_target
+                    <= self.settings.max_temperature
+                ):
+                    raise ValueError("Invalid arrival expectation")
+                self._arrival_expected = (
+                    target_at,
+                    expected_target,
+                    not_before,
+                )
             override = saved.get("override")
             if override is not None:
                 try:
@@ -388,6 +446,16 @@ class ControlRuntime:
             if self.override is None
             else {"target": self.override[0], "until": self.override[1].isoformat()},
             "learning": self.learning.as_dict(),
+            "arrival_recorded_for": self._arrival_recorded_for.isoformat()
+            if self._arrival_recorded_for is not None
+            else None,
+            "arrival_expected": None
+            if self._arrival_expected is None
+            else {
+                "target_at": self._arrival_expected[0].isoformat(),
+                "target": self._arrival_expected[1],
+                "not_before": self._arrival_expected[2].isoformat(),
+            },
             "fault": self.core.fault,
             "pending": pending or self._in_flight or self.core.pending is not None,
             "sources": self.sources,
@@ -571,12 +639,14 @@ class ControlRuntime:
         weather_entity = (
             resolve(self.hass, weather) if isinstance(weather, dict) else None
         )
-        self.forecast_outdoor = await async_forecast_temperature(
+        forecast = await async_forecast_temperature(
             self.hass,
             weather_entity,
             next_at,
             self.outdoor,
         )
+        self.forecast_outdoor = forecast.temperature
+        self.forecast_source = forecast.source
         schedule_delays = self._apply_mode()
         self.decision = self._decide()
         command = self.decision.command

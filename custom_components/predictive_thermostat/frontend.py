@@ -9,7 +9,7 @@ from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant
 
 CARD_URL = "/predictive_thermostat/predictive-thermostat-card.js"
-CARD_VERSION = "0.6.2"
+CARD_VERSION = "0.7.0"
 CARD_PATH = Path(__file__).parent / "frontend" / "predictive-thermostat-card.js"
 
 

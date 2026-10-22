@@ -2,7 +2,7 @@
 
 `predictive_thermostat` est une custom integration Home Assistant locale et paramétrable, conçue d'abord pour des chauffages à forte inertie tels qu'un poêle à granulés. Elle expose **une seule entité `climate` principale par zone**. Son planning interne signifie « température à atteindre à cette heure » ; la température extérieure alimente une prédiction explicable, locale et légère.
 
-## Version actuelle : 0.6.2 — thermostat prédictif avec carte Lovelace
+## Version actuelle : 0.7.0 — prédiction explicable et apprentissage des retards
 
 L’intégration propose `OFF`, `HEAT` manuel et `AUTO`, une consigne, un planning hebdomadaire, un adaptateur `switch`, un contrôleur de cycle centralisé, une anticipation fallback, un apprentissage local, une météo facultative et un arrêt optimal facultatif. Elle peut commander le switch de chauffage lorsque le mode observation est explicitement désactivé. Le modèle ne peut jamais augmenter la consigne au-delà de la prochaine cible planifiée, ni contourner les protections matérielles.
 
@@ -50,7 +50,9 @@ L'entité climate démarre en `OFF`, avec le mode observation actif. Une consign
 
 En `AUTO`, le planning interne résout la cible active et le prochain objectif. Chaque ligne quotidienne utilise le format `HH:MM=température`, par exemple `06:30=19, 18:00=21`. Chaque jour doit contenir au moins un horaire unique ; les objectifs sont des températures **à atteindre** à leur heure. Pour une prochaine hausse, le fallback calcule une fenêtre de préchauffage bornée à partir du délai d'allumage, du gain à obtenir, de la température extérieure et d'une marge configurable. Une absence de température extérieure supprime l'anticipation et conserve le changement de cible à l'heure prévue. Une modification manuelle de consigne pendant `AUTO` devient une dérogation jusqu'au prochain point, puis le planning reprend. Les horaires sont conservés en heure locale Home Assistant. Une heure inexistante au passage à l'heure d'été est reportée au premier instant valide ; une heure répétée en automne est exécutée une seule fois, lors de sa première occurrence.
 
-L'apprentissage mesure exclusivement le temps entre l'allumage réellement confirmé et la première atteinte de la consigne. La marche minimale, le dépassement et la régulation après cette première atteinte ne sont pas intégrés à la vitesse de chauffe. Si la prochaine consigne est déjà atteinte, la durée prédite est nulle.
+L'apprentissage mesure exclusivement le temps entre l'allumage réellement confirmé et la première atteinte de la consigne. La marche minimale, le dépassement et la régulation après cette première atteinte ne sont pas intégrés à la vitesse de chauffe. Si la prochaine consigne est déjà atteinte, la durée prédite est nulle. Pour une hausse planifiée, l'écart entre l'heure réelle d'atteinte et l'heure cible est aussi appris, y compris lorsque la cible est atteinte en retard. Une action manuelle annule cette observation pour ne pas attribuer son effet au modèle.
+
+La durée est la somme explicable du délai d'allumage, du temps nécessaire au gain de température, de la correction liée à l'écart intérieur/extérieur, de la marge configurée et de la correction moyenne d'arrivée. Le résultat est ensuite borné par les durées minimale et maximale de préchauffage. Lorsque la météo est configurée, la prévision à l'heure de l'objectif est prioritaire ; la sonde extérieure sert de repli.
 
 Pour préparer un essai contrôlé sur une instance de test, ouvrez **Configurer / Options** de l'intégration et renseignez toutes les options :
 
@@ -74,9 +76,9 @@ Les changements d'options rechargent proprement l'intégration. Vérifiez que l'
 
 1. Créez la zone avec les deux sondes et le switch, puis gardez **Mode observation** activé.
 2. Saisissez un planning simple sur tous les jours, par exemple `06:30=19; 22:30=17`. Utilisez de préférence le point pour les décimales : `07:15=20.5`. La virgule `20,5` reste acceptée.
-3. Vérifiez pendant quelques transitions les attributs `schedule_target_temperature`, `next_target_time`, `predicted_start_time`, `prediction_reason` et `fallback_reason`.
+3. Vérifiez pendant quelques transitions les attributs `schedule_target_temperature`, `next_target_time`, `predicted_start_time`, `prediction_outdoor_temperature`, `prediction_outdoor_source`, `prediction_reason` et `fallback_reason`.
 4. Si une entité météo est disponible, sélectionnez-la dans les options ; elle est facultative et la sonde extérieure conserve le rôle de repli.
-5. Comparez les horaires prédits aux températures réelles. Les attributs `learning_samples` et `last_prediction_error_minutes` montrent uniquement les agrégats appris.
+5. Comparez les horaires prédits aux températures réelles. `learning_samples`, `learned_heating_rate`, `learned_loss_factor` et `last_prediction_error_minutes` montrent les agrégats appris. Les attributs `prediction_ignition_minutes`, `prediction_temperature_gain_minutes`, `prediction_outdoor_loss_minutes`, `prediction_margin_minutes` et `prediction_arrival_correction_minutes` détaillent chaque terme du calcul courant.
 
 `control_state` décrit la décision interne (`idle`, `heating`, `cooldown`, `minimum_runtime`, `fault` ou `observation`). `pending_command` signale un ordre en attente de confirmation. `fault_reason` impose de corriger le problème puis de l’acquitter explicitement dans les options ; l’intégration ne relance pas rapidement le switch.
 

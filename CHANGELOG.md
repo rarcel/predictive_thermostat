@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0
+
+- Apprend désormais les arrivées tardives, au lieu de limiter la correction aux cibles atteintes avant l'heure prévue.
+- Persiste l'objectif d'arrivée en cours afin que cet apprentissage survive à un redémarrage Home Assistant.
+- Expose la température extérieure réellement utilisée et indique si elle provient de la météo ou de la sonde.
+- Décompose la durée prédite en délai d'allumage, montée en température, pertes extérieures, marge et correction d'arrivée.
+- Affiche dans la carte les coefficients appris de vitesse de chauffe et de pertes extérieures.
+
 ## 0.6.2
 
 - Rétablit le comportement standard du bouton d’informations de la carte thermostat.

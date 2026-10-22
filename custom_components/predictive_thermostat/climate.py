@@ -115,12 +115,20 @@ class PredictiveThermostat(ClimateEntity):
         outdoor = (
             self._display(runtime.outdoor) if runtime.outdoor is not None else None
         )
+        prediction_outdoor = (
+            self._display(runtime.forecast_outdoor)
+            if runtime.forecast_outdoor is not None
+            else None
+        )
+        prediction = runtime.prediction
         self._attr_extra_state_attributes = {
             "control_state": "observation"
             if runtime.settings.observation_only
             else runtime.decision.state,
             "observation_only": runtime.settings.observation_only,
             "outdoor_temperature": outdoor,
+            "prediction_outdoor_temperature": prediction_outdoor,
+            "prediction_outdoor_source": runtime.forecast_source,
             "heater_available": runtime.heater_available,
             "fault_reason": core.fault,
             "pending_command": "on"
@@ -156,17 +164,39 @@ class PredictiveThermostat(ClimateEntity):
             "predicted_start_time": runtime.predicted_start.isoformat()
             if runtime.predicted_start is not None
             else None,
-            "predicted_heating_minutes": runtime.prediction.minutes
-            if runtime.prediction is not None
+            "predicted_heating_minutes": prediction.minutes
+            if prediction is not None
             else None,
-            "prediction_confidence": runtime.prediction.confidence
-            if runtime.prediction is not None
+            "prediction_confidence": prediction.confidence
+            if prediction is not None
             else 0.0,
-            "prediction_reason": runtime.prediction.reason
-            if runtime.prediction is not None
+            "prediction_reason": prediction.reason
+            if prediction is not None
             else "outdoor_unavailable"
             if runtime.mode == "auto" and runtime.outdoor is None
             else None,
+            "prediction_ignition_minutes": prediction.ignition_minutes
+            if prediction is not None
+            else None,
+            "prediction_temperature_gain_minutes": prediction.temperature_gain_minutes
+            if prediction is not None
+            else None,
+            "prediction_outdoor_loss_minutes": prediction.outdoor_loss_minutes
+            if prediction is not None
+            else None,
+            "prediction_margin_minutes": prediction.margin_minutes
+            if prediction is not None
+            else None,
+            "prediction_arrival_correction_minutes": (
+                prediction.arrival_correction_minutes
+                if prediction is not None
+                else None
+            ),
+            "prediction_unbounded_minutes": prediction.unbounded_minutes
+            if prediction is not None
+            else None,
+            "learned_heating_rate": runtime.learning.heating_rate,
+            "learned_loss_factor": runtime.learning.loss_factor,
             "learning_samples": runtime.learning.samples,
             "last_prediction_error_minutes": runtime.learning.mean_arrival_error,
         }

@@ -20,6 +20,11 @@ def test_fallback_is_bounded_and_uses_outdoor_temperature():
     cold = model.predict(17, -5, 20)
     assert mild is not None and cold is not None
     assert mild.minutes == 15.5
+    assert mild.ignition_minutes == 5
+    assert mild.temperature_gain_minutes == 6
+    assert mild.outdoor_loss_minutes == 2.5
+    assert mild.margin_minutes == 2
+    assert mild.unbounded_minutes == mild.minutes
     assert cold.minutes > mild.minutes
     assert cold.confidence == 0.15
     assert model.predict(None, 5, 20) is None
