@@ -186,6 +186,58 @@ async def test_unload_never_commands_the_switch(hass, entry):
     assert not calls
 
 
+async def test_restart_preserves_confirmed_heating_without_command(hass, entry):
+    """A HA restart must leave a confirmed maintained contact heating."""
+    hass.config_entries.async_update_entry(
+        entry,
+        options={
+            "settings": Settings(
+                observation_only=False,
+                min_on=600,
+                min_off=60,
+                cooldown=60,
+            ).as_dict()
+        },
+    )
+    calls = []
+
+    async def record(call):
+        calls.append(call.service)
+
+    hass.services.async_register("switch", "turn_on", record)
+    hass.services.async_register("switch", "turn_off", record)
+    hass.states.async_set("switch.heater", "on")
+
+    entity_id, thermostat = await _entity(hass, entry)
+    await hass.services.async_call(
+        "climate",
+        "set_temperature",
+        {"entity_id": entity_id, "temperature": 22, "hvac_mode": "heat"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+    assert thermostat.runtime.core.observed is True
+    assert hass.states.get(entity_id).attributes["hvac_action"] == "heating"
+    assert not calls
+
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.states.get("switch.heater").state == "on"
+    assert not calls
+
+    restored_id, restored = await _entity(hass, entry)
+    assert restored_id == entity_id
+    assert restored.runtime.mode == "heat"
+    assert restored.runtime.target == 22
+    assert restored.runtime.core.observed is True
+    state = hass.states.get(restored_id)
+    assert state.state == "heat"
+    assert state.attributes["hvac_action"] == "heating"
+    assert state.attributes["control_state"] == "heating"
+    assert hass.states.get("switch.heater").state == "on"
+    assert not calls
+
+
 async def test_registry_resubscribe_survives_a_consumed_listener(hass, entry):
     """A registry update must not make the climate entity fail to reload."""
     _, thermostat = await _entity(hass, entry)
