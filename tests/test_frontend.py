@@ -42,3 +42,6 @@ def test_card_contains_actions_and_predictive_details():
     assert 'new CustomEvent("predictive-thermostat-show-details"' in source
     assert 'addEventListener("hass-more-info"' not in source
     assert 'class="menu-button"' not in source
+    assert "if (!this._config || !this._hass || this._nativeCard) return" in source
+    assert "this._nativeCardPromise" in source
+    assert "nativeCard.hass = this._hass" in source

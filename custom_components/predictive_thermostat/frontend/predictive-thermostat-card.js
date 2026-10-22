@@ -74,6 +74,7 @@ class PredictiveThermostatCard extends HTMLElement {
     super();
     this.attachShadow({ mode: "open" });
     this._nativeCard = null;
+    this._nativeCardPromise = null;
   }
 
   setConfig(config) {
@@ -82,11 +83,12 @@ class PredictiveThermostatCard extends HTMLElement {
     }
     this._config = { ...config };
     this._build();
-    this._ensureNativeCard();
+    if (this._hass) this._ensureNativeCard();
   }
 
   set hass(hass) {
     this._hass = hass;
+    if (!this._nativeCard) this._ensureNativeCard();
     if (this._nativeCard) this._nativeCard.hass = hass;
     this._update();
   }
@@ -131,21 +133,27 @@ class PredictiveThermostatCard extends HTMLElement {
   }
 
   async _ensureNativeCard() {
-    const helpers = await window.loadCardHelpers();
-    if (!this._config || this._nativeCard) return;
-    const cardConfig = {
-      type: "thermostat",
-      entity: this._config.entity,
-      features: [
-        ...(this._config.features || []),
-        { type: "custom:predictive-details-card-feature" },
-      ],
-    };
-    if (this._config.name) cardConfig.name = this._config.name;
-    this._nativeCard = await helpers.createCardElement(cardConfig);
-    this._nativeCard.addEventListener("predictive-thermostat-show-details", (event) => this._openDetails(event));
-    this.shadowRoot.querySelector("#native").replaceChildren(this._nativeCard);
-    if (this._hass) this._nativeCard.hass = this._hass;
+    if (!this._config || !this._hass || this._nativeCard) return;
+    if (this._nativeCardPromise) return this._nativeCardPromise;
+    this._nativeCardPromise = (async () => {
+      const helpers = await window.loadCardHelpers();
+      if (!this._config || !this._hass || this._nativeCard) return;
+      const cardConfig = {
+        type: "thermostat",
+        entity: this._config.entity,
+        features: [
+          ...(this._config.features || []),
+          { type: "custom:predictive-details-card-feature" },
+        ],
+      };
+      if (this._config.name) cardConfig.name = this._config.name;
+      const nativeCard = await helpers.createCardElement(cardConfig);
+      nativeCard.hass = this._hass;
+      nativeCard.addEventListener("predictive-thermostat-show-details", (event) => this._openDetails(event));
+      this._nativeCard = nativeCard;
+      this.shadowRoot.querySelector("#native").replaceChildren(nativeCard);
+    })().finally(() => { this._nativeCardPromise = null; });
+    return this._nativeCardPromise;
   }
 
   _formatDate(value) {
@@ -247,7 +255,7 @@ if (!customElements.get("predictive-details-card-feature")) {
     type: "predictive-details-card-feature",
     name: "Predictive Thermostat details",
     isSupported: (hass, context) => Boolean(
-      context?.entity_id && hass.states[context.entity_id]?.attributes?.control_state,
+      context?.entity_id && hass?.states?.[context.entity_id]?.attributes?.control_state,
     ),
   });
 }

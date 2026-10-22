@@ -29,4 +29,4 @@ La carte ne change ni le planning, ni les calculs, ni les protections matériell
 
 La ressource utilise une URL différente à chaque version et demande de ne pas être mise en cache. Cela évite qu'un reverse proxy qui ignore les paramètres de requête conserve une ancienne carte. Le proxy doit transmettre sans réécriture le chemin `/predictive_thermostat/` vers Home Assistant.
 
-Si la carte affiche « Custom element doesn't exist » ou « Erreur de configuration », redémarrez Home Assistant, videz le cache du site pour l'adresse concernée et faites un rechargement forcé de la page. Vérifiez ensuite que la version chargée de l’intégration est au moins `0.7.1`.
+Si la carte affiche « Custom element doesn't exist » ou « Erreur de configuration », redémarrez Home Assistant, videz le cache du site pour l'adresse concernée et faites un rechargement forcé de la page. Vérifiez ensuite que la version chargée de l’intégration est au moins `0.7.2`. La carte attend que le frontend ait fourni son contexte Home Assistant avant de construire le thermostat natif ; elle reste ainsi déterministe sur une connexion distante plus lente.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.2
+
+- Attend que le contexte Home Assistant soit disponible avant de construire la carte thermostat native.
+- Empêche deux initialisations concurrentes lors du chargement asynchrone des aides de carte.
+- Rend la détection de compatibilité de la fonctionnalité sûre pendant l'initialisation du frontend.
+
 ## 0.7.1
 
 - Sert la carte sous un chemin contenant sa version pour invalider aussi les caches de reverse proxy qui ignorent les paramètres de requête.
