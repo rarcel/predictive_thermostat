@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.7
+
+- Replace le bouton **Détails prédictifs** dans la zone officielle des fonctionnalités du thermostat, juste sous les commandes de température.
+- Conserve l'enregistrement Lovelace persistant qui garantit que la fonctionnalité est définie avant le rendu des cartes.
+
 ## 0.7.6
 
 - Enregistre la carte dans la collection de ressources Lovelace en mode stockage, au lieu de l'injecter après le démarrage du frontend.

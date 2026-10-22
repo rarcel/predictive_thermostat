@@ -13,7 +13,7 @@ from homeassistant.components.lovelace.resources import ResourceStorageCollectio
 from homeassistant.const import CONF_ID, CONF_URL
 from homeassistant.core import HomeAssistant
 
-CARD_VERSION = "0.7.6"
+CARD_VERSION = "0.7.7"
 CARD_URL = (
     f"/predictive_thermostat/predictive-thermostat-card-{CARD_VERSION}.js"
 )

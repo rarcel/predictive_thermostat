@@ -1,6 +1,6 @@
 # Carte Predictive Thermostat
 
-L’intégration fournit sa propre carte Lovelace. Elle reprend la carte thermostat officielle pour les commandes quotidiennes. Le bouton d’informations en haut à droite conserve exactement son comportement Home Assistant standard. Un bouton **Détails prédictifs** est affiché immédiatement sous la carte native, sans passer par le chargeur de fonctionnalités imbriquées du frontend.
+L’intégration fournit sa propre carte Lovelace. Elle reprend la carte thermostat officielle pour les commandes quotidiennes. Le bouton d’informations en haut à droite conserve exactement son comportement Home Assistant standard. Un bouton **Détails prédictifs** est ajouté dans la zone officielle des fonctionnalités, juste sous les boutons `−` et `+`.
 
 Après l’installation ou la mise à jour, redémarrez Home Assistant puis rechargez complètement le navigateur. En mode de stockage standard, l’intégration enregistre et met à jour sa ressource dans **Tableaux de bord > Ressources** afin que Lovelace attende réellement son chargement avant de construire la vue. Il ne faut pas ajouter une seconde ressource manuellement. En mode de ressources YAML, l’intégration conserve le chargeur frontend de repli.
 
@@ -29,4 +29,4 @@ La carte ne change ni le planning, ni les calculs, ni les protections matériell
 
 La ressource utilise une URL différente à chaque version et demande de ne pas être mise en cache. Cela évite qu'un reverse proxy qui ignore les paramètres de requête conserve une ancienne carte. Le proxy doit transmettre sans réécriture le chemin `/predictive_thermostat/` vers Home Assistant.
 
-Si la carte affiche « Custom element doesn't exist » ou « Erreur de configuration », redémarrez Home Assistant et vérifiez qu’une seule ressource `/predictive_thermostat/` existe. Elle doit correspondre à la version installée, au minimum `0.7.6`, et être de type module JavaScript.
+Si la carte affiche « Custom element doesn't exist » ou « Erreur de configuration », redémarrez Home Assistant et vérifiez qu’une seule ressource `/predictive_thermostat/` existe. Elle doit correspondre à la version installée, au minimum `0.7.7`, et être de type module JavaScript.
