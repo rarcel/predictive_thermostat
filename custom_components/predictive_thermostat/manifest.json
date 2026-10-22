@@ -3,9 +3,9 @@
   "name": "Predictive Thermostat",
   "codeowners": [],
   "config_flow": true,
-  "dependencies": ["climate", "sensor", "switch"],
+  "dependencies": ["climate", "frontend", "http", "sensor", "switch"],
   "integration_type": "service",
   "iot_class": "local_push",
   "requirements": [],
-  "version": "0.5.7"
+  "version": "0.6.0"
 }

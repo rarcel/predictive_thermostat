@@ -44,7 +44,7 @@ Les fixtures créent une instance HA de test en mémoire avec des entités facti
 
 La suite vérifie les flows, les doublons, les sources hors ligne, le changement de sources avec un seul reload, les identités, les unités, les mesures invalides, les renommages et suppressions, la désinscription des listeners, les diagnostics expurgés, les traductions et le manifeste minimal.
 
-La CI GitHub est fournie mais son exécution distante dépend de la publication du dépôt. Le manifeste n'invente ni URL de documentation publique ni codeowner : ils devront être renseignés lorsque le dépôt public et ses mainteneurs seront connus, avant une validation de distribution HACS/hassfest complète. Le chargement du manifeste et de l'intégration est vérifié localement par Home Assistant lui-même ; ce n'est pas une certification Home Assistant ou HACS.
+Les validations sont exécutées localement ; aucun workflow GitHub Actions n’est fourni. Le manifeste n'invente ni URL de documentation publique ni codeowner : ils devront être renseignés lorsque le dépôt public et ses mainteneurs seront connus, avant une validation de distribution HACS/hassfest complète. Le chargement du manifeste et de l'intégration est vérifié localement par Home Assistant lui-même ; ce n'est pas une certification Home Assistant ou HACS.
 
 ## Limites
 

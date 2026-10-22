@@ -2,7 +2,7 @@
 
 `predictive_thermostat` est une custom integration Home Assistant locale et paramétrable, conçue d'abord pour des chauffages à forte inertie tels qu'un poêle à granulés. Elle expose **une seule entité `climate` principale par zone**. Son planning interne signifie « température à atteindre à cette heure » ; la température extérieure alimente une prédiction explicable, locale et légère.
 
-## Version actuelle : 0.5.7 — thermostat prédictif avec commande protégée
+## Version actuelle : 0.6.0 — thermostat prédictif avec carte Lovelace
 
 L’intégration propose `OFF`, `HEAT` manuel et `AUTO`, une consigne, un planning hebdomadaire, un adaptateur `switch`, un contrôleur de cycle centralisé, une anticipation fallback, un apprentissage local, une météo facultative et un arrêt optimal facultatif. Elle peut commander le switch de chauffage lorsque le mode observation est explicitement désactivé. Le modèle ne peut jamais augmenter la consigne au-delà de la prochaine cible planifiée, ni contourner les protections matérielles.
 
@@ -82,39 +82,21 @@ Les changements d'options rechargent proprement l'intégration. Vérifiez que l'
 
 En cas de défaut verrouillé, corrigez d'abord sa cause puis cochez **Acquitter et réinitialiser un défaut verrouillé** dans les options. Cette action recharge l'intégration ; elle ne force pas de commande immédiate. Les attributs `control_state`, `fault_reason`, `pending_command`, `heater_available` et `fallback_reason` permettent d'examiner la situation sans exposer les références privées des sources dans les diagnostics.
 
-L'action `predictive_thermostat.reset_fault` permet aussi d'acquitter le défaut sans ouvrir les options. Elle refuse l'acquittement si l'état du chauffage n'est pas confirmé. Une ancienne commande encore en attente est abandonnée au profit de l'état `on` ou `off` réellement observé, puis les protections de cycle redémarrent intégralement avant toute nouvelle commande. La carte Climate standard ne permet pas d'ajouter une action propre à une intégration ; placez un bouton à côté de la carte si vous souhaitez cet accès direct :
+L'action `predictive_thermostat.reset_fault` permet aussi d'acquitter le défaut sans ouvrir les options. Elle refuse l'acquittement si l'état du chauffage n'est pas confirmé. Une ancienne commande encore en attente est abandonnée au profit de l'état `on` ou `off` réellement observé, puis les protections de cycle redémarrent intégralement avant toute nouvelle commande.
+
+La carte fournie ajoute ces actions à la carte thermostat et affiche les informations prédictives dans son menu :
 
 ```yaml
-type: button
-name: Acquitter le défaut
-icon: mdi:alert-circle-check
-tap_action:
-  action: perform-action
-  perform_action: predictive_thermostat.reset_fault
-  target:
-    entity_id: climate.chambre
-```
-
-Après une coupure ayant physiquement privé le chauffage d'alimentation pendant au moins la durée `min_off` et le cooldown, le même bouton peut confirmer que cette période est déjà écoulée. Cette variante est refusée tant que le switch n'expose pas réellement l'état `off` :
-
-```yaml
-type: button
-name: Reprendre après coupure prolongée
-icon: mdi:power-cycle
-tap_action:
-  action: perform-action
-  perform_action: predictive_thermostat.reset_fault
-  target:
-    entity_id: climate.poele
-  data:
-    confirmed_off_period: true
+type: custom:predictive-thermostat-card
+entity: climate.poele
+name: Poêle
 ```
 
 N'utilisez `confirmed_off_period: true` que lorsque le chauffage est resté réellement hors tension assez longtemps. Un acquittement ordinaire conserve le redémarrage complet de `min_off` et du cooldown afin d'empêcher les répétitions rapides après un simple défaut de commande.
 
 La confirmation de durée d'arrêt reste applicable si le défaut a déjà disparu après le redémarrage. Elle exige toujours un switch à `off` et refuse d'annuler une commande active.
 
-Une [carte Lovelace native prête à copier](docs/LOVELACE.md) rassemble la carte thermostat standard, l’acquittement ordinaire et la reprise après coupure prolongée. Elle ne nécessite aucune carte personnalisée ni ressource HACS.
+La [documentation de la carte Lovelace](docs/LOVELACE.md) détaille son installation, les informations affichées et les deux réinitialisations. Sa ressource est chargée automatiquement par l’intégration et ne demande pas une seconde installation HACS.
 
 ## Limites connues
 

@@ -11,6 +11,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.service import async_register_admin_service
 
 from .const import DATA_ENTITIES, DOMAIN, SERVICE_RESET_FAULT
+from .frontend import async_register_card
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -21,6 +22,7 @@ PLATFORMS = ["climate"]
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Register the fault acknowledgement action once for all zones."""
+    await async_register_card(hass)
     entities = hass.data.setdefault(DOMAIN, {}).setdefault(DATA_ENTITIES, {})
 
     async def async_reset_fault(call: ServiceCall) -> None:

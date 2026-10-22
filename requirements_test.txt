@@ -1,5 +1,6 @@
 # Verified together on Linux / Python 3.14.7.
 homeassistant==2026.9.3
+home-assistant-frontend==20260826.7
 pytest-homeassistant-custom-component==0.13.366
 ruff==0.16.8
 mypy==2.3.1

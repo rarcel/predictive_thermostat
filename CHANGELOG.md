@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+- Fournit une véritable carte Lovelace qui réutilise la carte thermostat native.
+- Ajoute un menu dépliant avec les données de chauffe prédictive et les deux actions de réinitialisation.
+- Charge automatiquement la ressource de la carte avec l’intégration, y compris lors d’une installation HACS.
+
 ## 0.5.7
 
 - Applique `confirmed_off_period` même lorsque le défaut a déjà été effacé pendant le redémarrage.
