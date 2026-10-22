@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.5
+
+- Supprime la fonctionnalité de carte personnalisée imbriquée, identifiée comme le dernier chemin de rendu en erreur.
+- Place le bouton **Détails prédictifs** directement sous le thermostat natif tout en conservant le dialogue et les actions existants.
+
 ## 0.7.4
 
 - Construit directement `hui-thermostat-card` après le chargement de sa définition.

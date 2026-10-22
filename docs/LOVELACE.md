@@ -1,6 +1,6 @@
 # Carte Predictive Thermostat
 
-L’intégration fournit sa propre carte Lovelace. Elle reprend la carte thermostat officielle pour les commandes quotidiennes. Le bouton d’informations en haut à droite conserve exactement son comportement Home Assistant standard. Un bouton **Détails prédictifs** est ajouté sous le réglage de température, dans la zone de fonctionnalités prévue par Home Assistant.
+L’intégration fournit sa propre carte Lovelace. Elle reprend la carte thermostat officielle pour les commandes quotidiennes. Le bouton d’informations en haut à droite conserve exactement son comportement Home Assistant standard. Un bouton **Détails prédictifs** est affiché immédiatement sous la carte native, sans passer par le chargeur de fonctionnalités imbriquées du frontend.
 
 Après l’installation ou la mise à jour, redémarrez Home Assistant puis rechargez complètement le navigateur. La ressource JavaScript est enregistrée automatiquement ; il n’est pas nécessaire de l’ajouter dans **Tableaux de bord > Ressources** ni d’installer une carte HACS séparée.
 
@@ -29,4 +29,4 @@ La carte ne change ni le planning, ni les calculs, ni les protections matériell
 
 La ressource utilise une URL différente à chaque version et demande de ne pas être mise en cache. Cela évite qu'un reverse proxy qui ignore les paramètres de requête conserve une ancienne carte. Le proxy doit transmettre sans réécriture le chemin `/predictive_thermostat/` vers Home Assistant.
 
-Si la carte affiche « Custom element doesn't exist » ou « Erreur de configuration », redémarrez Home Assistant, videz le cache du site pour l'adresse concernée et faites un rechargement forcé de la page. Vérifiez ensuite que la version chargée de l’intégration est au moins `0.7.4`. La carte attend que le frontend ait fourni son contexte Home Assistant, que l'entité configurée soit présente et que le composant thermostat natif soit défini. Elle instancie ensuite directement ce composant afin qu'un état de chargement transitoire ne soit pas converti silencieusement en carte d'erreur permanente.
+Si la carte affiche « Custom element doesn't exist » ou « Erreur de configuration », redémarrez Home Assistant, retirez toute ressource Predictive Thermostat ajoutée manuellement, videz le cache du site pour l'adresse concernée et faites un rechargement forcé. Vérifiez ensuite que la version chargée est au moins `0.7.5`.

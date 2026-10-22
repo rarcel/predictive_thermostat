@@ -37,9 +37,9 @@ def test_card_contains_actions_and_predictive_details():
     assert "confirmed_off_period: confirmedOffPeriod" in source
     assert "predicted_start_time" in source
     assert "prediction_confidence" in source
-    assert 'customElements.define("predictive-details-card-feature"' in source
-    assert 'type: "custom:predictive-details-card-feature"' in source
-    assert 'new CustomEvent("predictive-thermostat-show-details"' in source
+    assert 'class="details-trigger"' in source
+    assert "customCardFeatures" not in source
+    assert "predictive-details-card-feature" not in source
     assert 'addEventListener("hass-more-info"' not in source
     assert 'class="menu-button"' not in source
     assert "if (!this._config || !this._hass || this._nativeCard) return" in source
