@@ -19,6 +19,7 @@
 ## Maintenance
 
 - Retire le workflow GitHub Actions non fonctionnel ; les commandes locales de validation restent documentées.
+- Ajoute une composition Lovelace native réunissant la carte thermostat et les deux actions d’acquittement.
 
 ## 0.5.4
 

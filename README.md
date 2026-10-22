@@ -114,6 +114,8 @@ N'utilisez `confirmed_off_period: true` que lorsque le chauffage est resté rée
 
 La confirmation de durée d'arrêt reste applicable si le défaut a déjà disparu après le redémarrage. Elle exige toujours un switch à `off` et refuse d'annuler une commande active.
 
+Une [carte Lovelace native prête à copier](docs/LOVELACE.md) rassemble la carte thermostat standard, l’acquittement ordinaire et la reprise après coupure prolongée. Elle ne nécessite aucune carte personnalisée ni ressource HACS.
+
 ## Limites connues
 
 - L’actionneur V1 est un `switch` uniquement ; les scripts et entités climate comme actionneurs ne sont pas encore pris en charge.
