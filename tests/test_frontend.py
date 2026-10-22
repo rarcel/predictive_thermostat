@@ -45,3 +45,5 @@ def test_card_contains_actions_and_predictive_details():
     assert "if (!this._config || !this._hass || this._nativeCard) return" in source
     assert "this._nativeCardPromise" in source
     assert "nativeCard.hass = this._hass" in source
+    assert "this._hass.states?.[this._config.entity]" in source
+    assert 'nativeCard.localName === "hui-error-card"' in source

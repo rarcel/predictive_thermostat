@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.3
+
+- Attend que l'entité configurée soit présente dans les états Home Assistant avant de construire le thermostat natif.
+- Ignore une carte d'erreur transitoire produite pendant le chargement et permet une nouvelle tentative au prochain état reçu.
+
 ## 0.7.2
 
 - Attend que le contexte Home Assistant soit disponible avant de construire la carte thermostat native.

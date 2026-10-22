@@ -8,7 +8,7 @@ from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant
 
-CARD_VERSION = "0.7.2"
+CARD_VERSION = "0.7.3"
 CARD_URL = (
     f"/predictive_thermostat/predictive-thermostat-card-{CARD_VERSION}.js"
 )
