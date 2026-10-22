@@ -2,7 +2,7 @@ const CARD_TYPE = "predictive-thermostat-card";
 
 const TEXT = {
   en: {
-    menu: "Predictive heating details", close: "Close", nativeInfo: "Home Assistant details",
+    menu: "Predictive heating details", details: "Predictive details", close: "Close",
     controlState: "Control state", heater: "Heater", available: "Available",
     unavailable: "Unavailable", outdoor: "Outdoor temperature",
     scheduleTarget: "Schedule target", nextTarget: "Next target", nextTime: "Target time",
@@ -15,7 +15,7 @@ const TEXT = {
     success: "Reset request accepted.", failed: "Reset failed", minutes: "min",
   },
   fr: {
-    menu: "Détails de la chauffe prédictive", close: "Fermer", nativeInfo: "Informations Home Assistant",
+    menu: "Détails de la chauffe prédictive", details: "Détails prédictifs", close: "Fermer",
     controlState: "État du contrôle", heater: "Chauffage", available: "Disponible",
     unavailable: "Indisponible", outdoor: "Température extérieure",
     scheduleTarget: "Consigne planifiée", nextTarget: "Prochaine consigne", nextTime: "Heure cible",
@@ -28,6 +28,34 @@ const TEXT = {
     success: "Demande de réinitialisation acceptée.", failed: "Échec de la réinitialisation", minutes: "min",
   },
 };
+
+const language = (hass) => hass?.language?.toLowerCase().startsWith("fr") ? "fr" : "en";
+
+class PredictiveDetailsCardFeature extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this.shadowRoot.innerHTML = `
+      <style>
+        button { width: 100%; height: var(--feature-height, 42px); border: 0; border-radius: var(--feature-border-radius, 12px); color: var(--primary-text-color); background: var(--secondary-background-color); font: inherit; font-weight: 500; cursor: pointer; }
+        button:hover { background: var(--ha-color-fill-primary-loud-resting, var(--divider-color)); }
+        button:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+      </style><button type="button"></button>`;
+    this.shadowRoot.querySelector("button").addEventListener("click", (event) => {
+      event.stopPropagation();
+      this.dispatchEvent(new CustomEvent("predictive-thermostat-show-details", {
+        bubbles: true, composed: true,
+      }));
+    });
+  }
+
+  setConfig(config) { this._config = config; }
+  set context(context) { this._context = context; }
+  set hass(hass) {
+    this._hass = hass;
+    this.shadowRoot.querySelector("button").textContent = TEXT[language(hass)].details;
+  }
+}
 
 class PredictiveThermostatCard extends HTMLElement {
   constructor() {
@@ -52,7 +80,7 @@ class PredictiveThermostatCard extends HTMLElement {
   }
 
   getCardSize() { return 7; }
-  _language() { return this._hass?.language?.toLowerCase().startsWith("fr") ? "fr" : "en"; }
+  _language() { return language(this._hass); }
   _t(key) { return TEXT[this._language()][key]; }
 
   _build() {
@@ -80,11 +108,10 @@ class PredictiveThermostatCard extends HTMLElement {
         <h2></h2><dl></dl>
         <div class="actions"><ha-button class="reset" appearance="filled"></ha-button><ha-button class="reset-long"></ha-button></div>
         <div class="status" role="status" aria-live="polite"></div>
-        <div class="footer"><ha-button class="native-info"></ha-button><ha-button class="close"></ha-button></div>
+        <div class="footer"><ha-button class="close"></ha-button></div>
       </dialog>`;
     this.shadowRoot.querySelector(".reset").addEventListener("click", () => this._reset(false));
     this.shadowRoot.querySelector(".reset-long").addEventListener("click", () => this._reset(true));
-    this.shadowRoot.querySelector(".native-info").addEventListener("click", () => this._openNativeInfo());
     this.shadowRoot.querySelector(".close").addEventListener("click", () => this._closeDetails());
     this.shadowRoot.querySelector("dialog").addEventListener("click", (event) => {
       if (event.target === event.currentTarget) this._closeDetails();
@@ -94,10 +121,17 @@ class PredictiveThermostatCard extends HTMLElement {
   async _ensureNativeCard() {
     const helpers = await window.loadCardHelpers();
     if (!this._config || this._nativeCard) return;
-    const cardConfig = { type: "thermostat", entity: this._config.entity };
+    const cardConfig = {
+      type: "thermostat",
+      entity: this._config.entity,
+      features: [
+        ...(this._config.features || []),
+        { type: "custom:predictive-details-card-feature" },
+      ],
+    };
     if (this._config.name) cardConfig.name = this._config.name;
     this._nativeCard = await helpers.createCardElement(cardConfig);
-    this._nativeCard.addEventListener("hass-more-info", (event) => this._openDetails(event));
+    this._nativeCard.addEventListener("predictive-thermostat-show-details", (event) => this._openDetails(event));
     this.shadowRoot.querySelector("#native").replaceChildren(this._nativeCard);
     if (this._hass) this._nativeCard.hass = this._hass;
   }
@@ -140,7 +174,6 @@ class PredictiveThermostatCard extends HTMLElement {
     this.shadowRoot.querySelector("h2").textContent = this._t("menu");
     this.shadowRoot.querySelector(".reset").textContent = this._t("reset");
     this.shadowRoot.querySelector(".reset-long").textContent = this._t("resetLong");
-    this.shadowRoot.querySelector(".native-info").textContent = this._t("nativeInfo");
     this.shadowRoot.querySelector(".close").textContent = this._t("close");
     const state = this._hass?.states?.[this._config.entity];
     if (!state) return;
@@ -157,7 +190,6 @@ class PredictiveThermostatCard extends HTMLElement {
   }
 
   _openDetails(event) {
-    event.preventDefault();
     event.stopPropagation();
     this._update();
     const dialog = this.shadowRoot.querySelector("dialog");
@@ -167,13 +199,6 @@ class PredictiveThermostatCard extends HTMLElement {
   _closeDetails() {
     const dialog = this.shadowRoot.querySelector("dialog");
     if (dialog.open) dialog.close();
-  }
-
-  _openNativeInfo() {
-    this._closeDetails();
-    this.dispatchEvent(new CustomEvent("hass-more-info", {
-      detail: { entityId: this._config.entity }, bubbles: true, composed: true,
-    }));
   }
 
   async _reset(confirmedOffPeriod) {
@@ -191,6 +216,18 @@ class PredictiveThermostatCard extends HTMLElement {
       status.classList.add("error");
     }
   }
+}
+
+if (!customElements.get("predictive-details-card-feature")) {
+  customElements.define("predictive-details-card-feature", PredictiveDetailsCardFeature);
+  window.customCardFeatures = window.customCardFeatures || [];
+  window.customCardFeatures.push({
+    type: "predictive-details-card-feature",
+    name: "Predictive Thermostat details",
+    isSupported: (hass, context) => Boolean(
+      context?.entity_id && hass.states[context.entity_id]?.attributes?.control_state,
+    ),
+  });
 }
 
 if (!customElements.get(CARD_TYPE)) {

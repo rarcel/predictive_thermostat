@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.2
+
+- Rétablit le comportement standard du bouton d’informations de la carte thermostat.
+- Ajoute un bouton **Détails prédictifs** sous le réglage de température grâce au mécanisme officiel des card features.
+- Réserve le nouveau panneau aux données prédictives et aux actions de réinitialisation.
+
 ## 0.6.1
 
 - Supprime le bouton menu ajouté par la carte, qui recouvrait le bouton natif du thermostat.
