@@ -4,6 +4,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from homeassistant.components.lovelace import LOVELACE_DATA, MODE_STORAGE
+
 from custom_components.predictive_thermostat.frontend import (
     CARD_PATH,
     CARD_URL,
@@ -14,8 +16,20 @@ from custom_components.predictive_thermostat.frontend import (
 
 async def test_register_card():
     register = AsyncMock()
+    resources = SimpleNamespace(
+        async_get_info=AsyncMock(),
+        async_items=MagicMock(return_value=[]),
+        async_create_item=AsyncMock(),
+        async_update_item=AsyncMock(),
+        async_delete_item=AsyncMock(),
+    )
     hass = MagicMock()
     hass.http = SimpleNamespace(async_register_static_paths=register)
+    hass.data = {
+        LOVELACE_DATA: SimpleNamespace(
+            resource_mode=MODE_STORAGE, resources=resources
+        )
+    }
     with patch(
         "custom_components.predictive_thermostat.frontend.add_extra_js_url"
     ) as add_url:
@@ -27,7 +41,11 @@ async def test_register_card():
     assert Path(static_paths[0].path) == CARD_PATH
     assert static_paths[0].cache_headers is False
     assert CARD_VERSION in CARD_URL
-    add_url.assert_called_once_with(hass, CARD_URL)
+    add_url.assert_not_called()
+    resources.async_get_info.assert_awaited_once()
+    resources.async_create_item.assert_awaited_once_with(
+        {"url": CARD_URL, "res_type": "module"}
+    )
 
 
 def test_card_contains_actions_and_predictive_details():

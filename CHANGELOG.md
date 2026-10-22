@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.6
+
+- Enregistre la carte dans la collection de ressources Lovelace en mode stockage, au lieu de l'injecter après le démarrage du frontend.
+- Met à jour l'URL à chaque version et supprime les anciennes ressources Predictive Thermostat en double.
+- Conserve `add_extra_js_url` uniquement comme repli pour les installations dont les ressources sont gérées en YAML.
+
 ## 0.7.5
 
 - Supprime la fonctionnalité de carte personnalisée imbriquée, identifiée comme le dernier chemin de rendu en erreur.
