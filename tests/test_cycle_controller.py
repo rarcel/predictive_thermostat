@@ -133,6 +133,26 @@ def test_confirmed_off_period_is_rejected_while_heater_is_on(controller):
     assert core.fault == "command_interrupted"
 
 
+def test_confirmed_off_period_applies_after_fault_was_already_cleared(controller):
+    core, clock = controller
+    core.observe(False)
+    clock.now = 100
+
+    assert core.fault is None
+    assert core.acknowledge_fault(confirmed_off_period=True)
+    assert core.decide(True, 20, 10).command is True
+
+
+def test_confirmed_off_period_does_not_cancel_a_live_command(controller):
+    core, clock = controller
+    core.observe(False)
+    clock.now = 100
+    core.start_command(True)
+
+    assert not core.acknowledge_fault(confirmed_off_period=True)
+    assert core.pending is True
+
+
 def test_restart_reapplies_full_protection(controller):
     core, clock = controller
     clock.now = 1000

@@ -62,17 +62,21 @@ class CycleController:
 
     def acknowledge_fault(self, *, confirmed_off_period: bool = False) -> bool:
         """Clear a latched fault only after a safe actuator reconciliation."""
-        if self.fault is None:
+        had_fault = self.fault is not None
+        if not had_fault and not confirmed_off_period:
             return True
         if self.observed is None:
             return False
         if confirmed_off_period and self.observed:
             return False
+        if not had_fault and self.pending is not None:
+            return False
         # Explicit acknowledgement accepts the currently confirmed actuator
         # state as authoritative, even when a previous command expected the
         # opposite state. Full cycle protection restarts below before another
         # command can be emitted.
-        self.pending = None
+        if had_fault:
+            self.pending = None
         self.fault = None
         self.pending_until = None
         now = self.clock()

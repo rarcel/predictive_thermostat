@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.7
+
+- Applique `confirmed_off_period` même lorsque le défaut a déjà été effacé pendant le redémarrage.
+- Refuse toujours cette confirmation si le chauffage est `on`, indisponible ou si une commande active est encore en attente.
+
 ## 0.5.6
 
 - Ajoute à `predictive_thermostat.reset_fault` l'option explicite `confirmed_off_period` pour reprendre après une coupure prolongée.
