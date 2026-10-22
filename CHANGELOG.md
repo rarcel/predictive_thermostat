@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.1
+
+- Sert la carte sous un chemin contenant sa version pour invalider aussi les caches de reverse proxy qui ignorent les paramètres de requête.
+- Désactive les en-têtes de cache du fichier JavaScript et documente le diagnostic des accès HTTPS externes.
+
 ## 0.7.0
 
 - Apprend désormais les arrivées tardives, au lieu de limiter la correction aux cibles atteintes avant l'heure prévue.

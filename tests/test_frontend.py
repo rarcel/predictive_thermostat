@@ -25,8 +25,9 @@ async def test_register_card():
     assert len(static_paths) == 1
     assert static_paths[0].url_path == CARD_URL
     assert Path(static_paths[0].path) == CARD_PATH
-    assert static_paths[0].cache_headers is True
-    add_url.assert_called_once_with(hass, f"{CARD_URL}?v={CARD_VERSION}")
+    assert static_paths[0].cache_headers is False
+    assert CARD_VERSION in CARD_URL
+    add_url.assert_called_once_with(hass, CARD_URL)
 
 
 def test_card_contains_actions_and_predictive_details():

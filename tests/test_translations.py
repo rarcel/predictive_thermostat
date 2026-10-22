@@ -33,4 +33,4 @@ def test_manifest():
     assert manifest["domain"] == "predictive_thermostat"
     assert manifest["config_flow"] is True
     assert manifest["requirements"] == []
-    assert manifest["version"] == "0.7.0"
+    assert manifest["version"] == "0.7.1"
