@@ -46,4 +46,7 @@ def test_card_contains_actions_and_predictive_details():
     assert "this._nativeCardPromise" in source
     assert "nativeCard.hass = this._hass" in source
     assert "this._hass.states?.[this._config.entity]" in source
-    assert 'nativeCard.localName === "hui-error-card"' in source
+    assert 'customElements.whenDefined("hui-thermostat-card")' in source
+    assert 'document.createElement("hui-thermostat-card")' in source
+    assert "nativeCard.setConfig(cardConfig)" in source
+    assert "helpers.createCardElement" not in source

@@ -137,7 +137,11 @@ class PredictiveThermostatCard extends HTMLElement {
     if (!this._hass.states?.[this._config.entity]) return;
     if (this._nativeCardPromise) return this._nativeCardPromise;
     this._nativeCardPromise = (async () => {
-      const helpers = await window.loadCardHelpers();
+      // Loading the helpers imports Home Assistant's always-loaded card classes.
+      // Instantiate the native card directly: createCardElement deliberately
+      // converts any transient setup problem into a permanent hui-error-card.
+      await window.loadCardHelpers();
+      await customElements.whenDefined("hui-thermostat-card");
       if (!this._config || !this._hass || this._nativeCard) return;
       if (!this._hass.states?.[this._config.entity]) return;
       const cardConfig = {
@@ -149,8 +153,8 @@ class PredictiveThermostatCard extends HTMLElement {
         ],
       };
       if (this._config.name) cardConfig.name = this._config.name;
-      const nativeCard = await helpers.createCardElement(cardConfig);
-      if (nativeCard.localName === "hui-error-card") return;
+      const nativeCard = document.createElement("hui-thermostat-card");
+      nativeCard.setConfig(cardConfig);
       nativeCard.hass = this._hass;
       nativeCard.addEventListener("predictive-thermostat-show-details", (event) => this._openDetails(event));
       this._nativeCard = nativeCard;

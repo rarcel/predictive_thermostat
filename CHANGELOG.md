@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.4
+
+- Construit directement `hui-thermostat-card` après le chargement de sa définition.
+- Évite `createCardElement`, qui convertissait silencieusement un problème transitoire de chargement en carte d'erreur permanente.
+
 ## 0.7.3
 
 - Attend que l'entité configurée soit présente dans les états Home Assistant avant de construire le thermostat natif.
