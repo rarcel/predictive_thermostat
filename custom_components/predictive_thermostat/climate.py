@@ -76,11 +76,14 @@ class PredictiveThermostat(ClimateEntity):
         await self.runtime.stop()
         await super().async_will_remove_from_hass()
 
-    async def async_reset_fault(self) -> None:
+    async def async_reset_fault(self, *, confirmed_off_period: bool = False) -> None:
         """Acknowledge a latched fault without bypassing cycle protections."""
-        if not self.runtime.reset_fault():
+        if not self.runtime.reset_fault(
+            confirmed_off_period=confirmed_off_period
+        ):
             raise ServiceValidationError(
-                "The heater must currently report a confirmed on or off state"
+                "The heater state is not confirmed, or confirmed-off was requested "
+                "while the heater is on"
             )
 
     @callback

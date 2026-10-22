@@ -67,6 +67,31 @@ async def test_fault_can_be_reset_through_entity_action(hass, entry):
     dismiss.assert_called_once()
 
 
+async def test_fault_action_can_confirm_elapsed_off_period(hass, entry):
+    entity_id = await loaded(hass, entry)
+    component = hass.data[entity_component.DATA_INSTANCES]["climate"]
+    thermostat = component.get_entity(entity_id)
+    thermostat.runtime.core.fail("command_interrupted")
+
+    await hass.services.async_call(
+        DOMAIN,
+        "reset_fault",
+        {"entity_id": [entity_id], "confirmed_off_period": True},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    assert hass.states.get(entity_id).attributes["fault_reason"] is None
+    assert thermostat.runtime.core.since is not None
+    assert (
+        thermostat.runtime.core.clock() - thermostat.runtime.core.since
+        >= max(
+            thermostat.runtime.settings.min_off,
+            thermostat.runtime.settings.cooldown,
+        )
+    )
+
+
 @pytest.mark.parametrize(
     "value,unit",
     [

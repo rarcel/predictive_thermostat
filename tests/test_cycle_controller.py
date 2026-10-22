@@ -112,6 +112,27 @@ def test_fault_acknowledgement_accepts_confirmed_state_over_pending(controller):
     assert core.decide(True, 20, 10).state == "cooldown"
 
 
+def test_confirmed_off_period_satisfies_restart_protections(controller):
+    core, clock = controller
+    core.observe(False)
+    core.fail("command_interrupted")
+    clock.now = 100
+
+    assert core.acknowledge_fault(confirmed_off_period=True)
+    assert core.fault is None
+    assert core.pending is None
+    assert core.decide(True, 20, 10).command is True
+
+
+def test_confirmed_off_period_is_rejected_while_heater_is_on(controller):
+    core, _clock = controller
+    core.observe(True)
+    core.fail("command_interrupted")
+
+    assert not core.acknowledge_fault(confirmed_off_period=True)
+    assert core.fault == "command_interrupted"
+
+
 def test_restart_reapplies_full_protection(controller):
     core, clock = controller
     clock.now = 1000

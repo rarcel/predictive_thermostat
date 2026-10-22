@@ -24,20 +24,28 @@ async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     entities = hass.data.setdefault(DOMAIN, {}).setdefault(DATA_ENTITIES, {})
 
     async def async_reset_fault(call: ServiceCall) -> None:
+        confirmed_off_period = call.data.get("confirmed_off_period", False)
         for entity_id in call.data[ATTR_ENTITY_ID]:
             entity = entities.get(entity_id)
             if entity is None:
                 raise ServiceValidationError(
                     f"{entity_id} is not a Predictive Thermostat entity"
                 )
-            await entity.async_reset_fault()
+            await entity.async_reset_fault(
+                confirmed_off_period=confirmed_off_period
+            )
 
     async_register_admin_service(
         hass,
         DOMAIN,
         SERVICE_RESET_FAULT,
         async_reset_fault,
-        schema=vol.Schema({vol.Required(ATTR_ENTITY_ID): cv.entity_ids}),
+        schema=vol.Schema(
+            {
+                vol.Required(ATTR_ENTITY_ID): cv.entity_ids,
+                vol.Optional("confirmed_off_period", default=False): cv.boolean,
+            }
+        ),
     )
     return True
 

@@ -60,11 +60,13 @@ class CycleController:
             return True
         return False
 
-    def acknowledge_fault(self) -> bool:
+    def acknowledge_fault(self, *, confirmed_off_period: bool = False) -> bool:
         """Clear a latched fault only after a safe actuator reconciliation."""
         if self.fault is None:
             return True
         if self.observed is None:
+            return False
+        if confirmed_off_period and self.observed:
             return False
         # Explicit acknowledgement accepts the currently confirmed actuator
         # state as authoritative, even when a previous command expected the
@@ -73,8 +75,12 @@ class CycleController:
         self.pending = None
         self.fault = None
         self.pending_until = None
-        # Restart protection timing from the state confirmed at acknowledgement.
-        self.since = self.clock()
+        now = self.clock()
+        self.since = (
+            now - max(self.settings.min_off, self.settings.cooldown)
+            if confirmed_off_period
+            else now
+        )
         return True
 
     def decide(self, heat: bool, target: float, temperature: float | None) -> Decision:

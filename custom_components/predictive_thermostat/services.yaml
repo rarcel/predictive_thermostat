@@ -8,3 +8,13 @@ reset_fault:
     entity:
       integration: predictive_thermostat
       domain: climate
+  fields:
+    confirmed_off_period:
+      name: Confirm that the off period has elapsed
+      description: >-
+        Use only after verifying that the heater has physically remained off
+        for at least the configured minimum-off and cooldown durations.
+      required: false
+      default: false
+      selector:
+        boolean:

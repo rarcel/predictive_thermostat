@@ -171,10 +171,12 @@ class ControlRuntime:
         )
         self._fault_alert_active = True
 
-    def reset_fault(self) -> bool:
+    def reset_fault(self, *, confirmed_off_period: bool = False) -> bool:
         """Acknowledge a fault after rereading the real actuator state."""
         self._read()
-        if not self.core.acknowledge_fault():
+        if not self.core.acknowledge_fault(
+            confirmed_off_period=confirmed_off_period
+        ):
             return False
         self._logged_fault = None
         self._update_fault_notification()

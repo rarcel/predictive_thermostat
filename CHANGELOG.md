@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.6
+
+- Ajoute à `predictive_thermostat.reset_fault` l'option explicite `confirmed_off_period` pour reprendre après une coupure prolongée.
+- Cette option exige un état réel `off` et considère alors `min_off` et le cooldown comme déjà écoulés ; l'acquittement ordinaire reste conservateur.
+
 ## 0.5.5
 
 - Limite chaque échantillon d'apprentissage à la période entre l'allumage confirmé et la première atteinte de la consigne.
